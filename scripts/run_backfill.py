@@ -26,6 +26,7 @@ from lab.core.nse_calendar import NseCalendar
 from lab.core.secrets import EnvSecretsProvider
 from lab.core.types import BarInterval
 from lab.data.brokers.kite_adapter import KiteAdapter
+from lab.data.brokers.kite_auth import KiteTokenStore
 from lab.data.ingest.backfill import Backfiller, BackfillPlan
 from lab.data.store.parquet_archive import ParquetArchive
 
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None) -> None:
 
     secrets = EnvSecretsProvider.from_environment(dotenv_path=Path(".env"))
     instrument_tokens: dict[str, int] = json.loads(Path(args.instruments).read_text("utf-8"))
-    adapter = KiteAdapter.from_secrets(secrets, instrument_tokens)
+    adapter = KiteAdapter.from_secrets(secrets, instrument_tokens, token_store=KiteTokenStore())
     archive = ParquetArchive(Path(args.data_root))
     calendar = NseCalendar.from_settings(settings)
 

@@ -19,11 +19,13 @@ from typing import Any, Protocol, runtime_checkable
 from lab.core.logging import get_logger
 from lab.core.secrets import SecretsProvider
 from lab.core.types import BarInterval, Candle
+from lab.data.brokers.kite_auth import KiteTokenStore
 
 _log = get_logger("data.brokers.kite")
 
 #: Secret names the adapter resolves through the secrets interface (never literals).
 API_KEY_SECRET = "KITE_API_KEY"  # noqa: S105 — secret NAME (env-var key), not a value
+API_SECRET_SECRET = "KITE_API_SECRET"  # noqa: S105 — secret NAME, not a value
 ACCESS_TOKEN_SECRET = "KITE_ACCESS_TOKEN"  # noqa: S105 — secret NAME, not a value
 
 
@@ -52,6 +54,63 @@ class KiteClient(Protocol):
 
 class UnknownSymbolError(KeyError):
     """Raised when a symbol cannot be resolved to a Kite instrument token."""
+
+
+class MissingAccessTokenError(RuntimeError):
+    """Raised when no daily access token is available (run the login first)."""
+
+
+def _resolve_access_token(secrets: SecretsProvider, token_store: KiteTokenStore | None) -> str:
+    """Return the day's access token from the token store, else the secrets interface."""
+    if token_store is not None:
+        stored = token_store.load()
+        if stored is not None:
+            return stored.access_token
+    token = secrets.get_optional(ACCESS_TOKEN_SECRET)
+    if not token:
+        raise MissingAccessTokenError(
+            "no Kite access token; run scripts/kite_login.py to mint the day's token"
+        )
+    return token
+
+
+def _parse_instrument_tokens(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    universe: Sequence[str] | None = None,
+    equity_only: bool = True,
+) -> dict[str, int]:
+    """Build a ``{tradingsymbol: instrument_token}`` map from an instruments dump."""
+    wanted = set(universe) if universe is not None else None
+    tokens: dict[str, int] = {}
+    for row in rows:
+        if equity_only and row.get("instrument_type") != "EQ":
+            continue
+        symbol = str(row["tradingsymbol"])
+        if wanted is not None and symbol not in wanted:
+            continue
+        tokens[symbol] = int(row["instrument_token"])
+    return tokens
+
+
+def fetch_instrument_tokens(
+    api_key: str,
+    access_token: str,
+    *,
+    exchange: str = "NSE",
+    universe: Sequence[str] | None = None,
+) -> dict[str, int]:
+    """Fetch the instruments dump and return a ``{symbol: token}`` map (live SDK).
+
+    Imports ``kiteconnect`` lazily. Restricts to cash-equity (``EQ``) instruments
+    and, if ``universe`` is given, to those symbols.
+    """
+    from kiteconnect import KiteConnect
+
+    client = KiteConnect(api_key=api_key)
+    client.set_access_token(access_token)
+    rows: list[dict[str, Any]] = client.instruments(exchange)
+    return _parse_instrument_tokens(rows, universe=universe)
 
 
 def candle_from_kite_row(symbol: str, interval: BarInterval, row: Mapping[str, Any]) -> Candle:
@@ -104,18 +163,20 @@ class KiteAdapter:
         secrets: SecretsProvider,
         instrument_tokens: Mapping[str, int],
         *,
+        token_store: KiteTokenStore | None = None,
         fetch_oi: bool = False,
     ) -> KiteAdapter:
         """Build a live adapter, resolving credentials through the secrets interface.
 
-        The ``kiteconnect`` SDK is imported lazily here so importing this module
-        never requires the SDK to be installed at type-check time on paths that
-        only use a fake client.
+        The API key comes from the secrets interface; the daily access token comes
+        from ``token_store`` (minted by ``scripts/kite_login.py``) if given, else
+        from the ``KITE_ACCESS_TOKEN`` secret. The ``kiteconnect`` SDK is imported
+        lazily so importing this module never requires the SDK.
         """
         from kiteconnect import KiteConnect
 
         api_key = secrets.get(API_KEY_SECRET)
-        access_token = secrets.get(ACCESS_TOKEN_SECRET)
+        access_token = _resolve_access_token(secrets, token_store)
         client: KiteClient = KiteConnect(api_key=api_key)
         client.set_access_token(access_token)
         return cls(client, instrument_tokens, fetch_oi=fetch_oi)
