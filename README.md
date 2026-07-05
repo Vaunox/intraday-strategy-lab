@@ -23,7 +23,7 @@ The apparatus that judges a strategy is built **before** any strategy is tested.
 Read [`MASTER_BLUEPRINT.md`](MASTER_BLUEPRINT.md) top to bottom and build it **one full phase per session**, respecting the phase gates. A phase is the session unit from start to gate — including the strategy phases, where a whole batch of studies sharing one harness is completed together (Phase 3 = all 14 single-factor studies; Phase 4 = all 6 multi-factor studies). Phases: 0 Foundation → 1 Data & Features → 2 Research Harness → 3 Single-Factor Studies → 4 Multi-Factor Studies → 5 Synthesis & Findings.
 
 ## Setup
-> **Note:** this repo currently sits at its *pre-Phase-0* scaffold state. The toolchain files these commands need — `pyproject.toml`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, and the initial test suite — are created in **Phase 0 (P0.1)**. The commands below work once Gate 0 is tagged; on a fresh scaffold clone they will not yet run.
+> **Note:** Phase 0 (Foundation) is complete and Gate 0 is tagged (`gate-0-foundation`). The toolchain (`pyproject.toml`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`) and the `src/lab/core` layer with its test suite are in place, so the commands below run on a fresh clone.
 ```bash
 # toolchain: uv (or your preferred venv manager) — available after Phase 0
 uv sync
