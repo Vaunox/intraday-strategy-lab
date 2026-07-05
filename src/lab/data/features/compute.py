@@ -12,8 +12,11 @@ numbers); Phase-3 study specs pin these from ``config/``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
+from typing import Any
 
+from lab.core.config import Settings
 from lab.data.features import indicators
 from lab.data.features.ohlcv import OHLCV, FloatArray
 
@@ -68,6 +71,32 @@ class FeatureConfig:
     relative_volume_period: int = 20
     realized_vol_period: int = 20
     opening_range_minutes: int = 15
+
+    def __post_init__(self) -> None:
+        """Validate every parameter is a positive number (fail loudly on bad config)."""
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+                raise ValueError(
+                    f"feature config {field.name!r} must be a positive number; got {value!r}"
+                )
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> FeatureConfig:
+        """Build a config from a mapping, overriding defaults; reject unknown keys."""
+        known = {field.name for field in fields(cls)}
+        unknown = set(mapping) - known
+        if unknown:
+            raise ValueError(f"unknown feature config keys: {sorted(unknown)}")
+        return cls(**{key: value for key, value in mapping.items() if key in known})
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> FeatureConfig:
+        """Build a config from the ``features`` section of loaded settings."""
+        raw = settings.raw.get("features")
+        if not isinstance(raw, Mapping):
+            return cls()
+        return cls.from_mapping(raw)
 
 
 def compute_features(data: OHLCV, config: FeatureConfig | None = None) -> dict[str, FloatArray]:

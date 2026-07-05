@@ -35,6 +35,13 @@ dev = [
     "pandas-stubs>=2.2",
 ]
 
+# Optional maintenance tooling — NOT synced by default (CI stays lean).
+# Enable with: uv sync --group tooling. Used only by
+# scripts/generate_nse_holidays.py to source NSE holidays from a maintained calendar.
+tooling = [
+    "exchange-calendars>=4.5",
+]
+
 [build-system]
 requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"

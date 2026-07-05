@@ -42,6 +42,15 @@ def test_configured_holidays_are_not_trading_days(calendar: NseCalendar, holiday
     assert not calendar.is_trading_day(holiday)
 
 
+@pytest.mark.parametrize(
+    "holiday",
+    [date(2018, 8, 15), date(2021, 1, 26), date(2023, 12, 25), date(2026, 1, 26)],
+)
+def test_expanded_range_holidays_are_covered(calendar: NseCalendar, holiday: date) -> None:
+    # The holiday list now spans 2018-2026 (generated from exchange_calendars XBOM).
+    assert not calendar.is_trading_day(holiday)
+
+
 def test_weekends_are_not_trading_days(calendar: NseCalendar) -> None:
     assert not calendar.is_trading_day(date(2024, 8, 17))  # Saturday
     assert not calendar.is_trading_day(date(2024, 8, 18))  # Sunday

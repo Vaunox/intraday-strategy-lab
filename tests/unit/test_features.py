@@ -5,18 +5,26 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
 
+from lab.core.config import load_settings
 from lab.core.types import BarInterval, Candle
 from lab.data.features import indicators
-from lab.data.features.compute import FEATURE_NAMES, compute_features, feature_names
+from lab.data.features.compute import (
+    FEATURE_NAMES,
+    FeatureConfig,
+    compute_features,
+    feature_names,
+)
 from lab.data.features.harness import assert_point_in_time, find_skew
 from lab.data.features.ohlcv import OHLCV
 
 IST = ZoneInfo("Asia/Kolkata")
+REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
 
 
 def _ohlcv(candles: Sequence[Candle]) -> OHLCV:
@@ -151,3 +159,35 @@ def test_compute_features_does_not_mutate_input() -> None:
 
 def test_real_feature_set_has_no_skew() -> None:
     assert find_skew(_synthetic()) == []
+
+
+# --- feature config wiring (P1 follow-up) ------------------------------------ #
+def test_feature_config_from_repo_settings() -> None:
+    settings = load_settings("dev", config_dir=REPO_CONFIG, environ={})
+    cfg = FeatureConfig.from_settings(settings)
+    assert cfg.sma_period == 20
+    assert cfg.rsi_period == 14
+    assert cfg.bb_num_std == 2.0
+
+
+def test_feature_config_env_var_override_flows_through() -> None:
+    settings = load_settings(
+        "dev", config_dir=REPO_CONFIG, environ={"LAB__FEATURES__RSI_PERIOD": "7"}
+    )
+    assert FeatureConfig.from_settings(settings).rsi_period == 7
+
+
+def test_feature_config_from_mapping_overrides_defaults() -> None:
+    cfg = FeatureConfig.from_mapping({"rsi_period": 9})
+    assert cfg.rsi_period == 9
+    assert cfg.sma_period == 20  # untouched default
+
+
+def test_feature_config_rejects_unknown_key() -> None:
+    with pytest.raises(ValueError, match="unknown feature config"):
+        FeatureConfig.from_mapping({"bogus_period": 3})
+
+
+def test_feature_config_rejects_non_positive_value() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        FeatureConfig.from_mapping({"sma_period": -5})
