@@ -108,6 +108,13 @@ exclude = ["notebooks/"]
 module = ["talib", "talib.*", "kiteconnect", "kiteconnect.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# pyarrow ships incomplete inline types; skip following it so its calls are Any
+# at the boundary rather than "untyped call" errors. Our signatures stay typed.
+module = ["pyarrow", "pyarrow.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
+
 # --------------------------------------------------------------------------- #
 # pytest                                                                       #
 # --------------------------------------------------------------------------- #
