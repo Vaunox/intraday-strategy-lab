@@ -37,6 +37,7 @@ from lab.research.validation.sharpe import annualized_sharpe, return_stats
 REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
 IST = ZoneInfo("Asia/Kolkata")
 PERIODS = 18750.0
+NO_EMBARGO = timedelta(0)
 
 _PASSING = KillGateInputs(
     cpcv_median_path_sharpe=1.5,
@@ -138,7 +139,15 @@ def test_gate2_end_to_end_reference_spec_through_killgate(tmp_path: Path) -> Non
     targets = signals_to_targets(candles, spec.generate_signals(candles))
     result = run_backtest(candles, targets, costs)
     net = result.net_returns
-    cpcv = combinatorial_purged_cv(net, n_groups=6, k_test_groups=2, periods_per_year=PERIODS)
+    cpcv = combinatorial_purged_cv(
+        net,
+        result.entry_times,
+        result.exit_times,
+        n_groups=6,
+        k_test_groups=2,
+        periods_per_year=PERIODS,
+        embargo=NO_EMBARGO,
+    )
 
     # Ledger: log variant runs; DSR pulls the EFFECTIVE trial count automatically.
     ledger = TrialLedger(tmp_path / "trials")

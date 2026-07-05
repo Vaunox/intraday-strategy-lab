@@ -23,6 +23,18 @@ import numpy as np
 ONE_TRADING_DAY = timedelta(days=1)
 
 
+def label_overlaps(
+    entry: datetime, exit_: datetime, span_start: datetime, span_end: datetime
+) -> bool:
+    """Whether label window ``[entry, exit_]`` intersects ``[span_start, span_end]``.
+
+    The single shared overlap primitive used by both the purged k-fold splitter
+    and the combinatorial purged CV, so their purge semantics cannot drift. To
+    apply an embargo, pass a span already widened by the embargo on both ends.
+    """
+    return entry <= span_end and exit_ >= span_start
+
+
 @dataclass(frozen=True, slots=True)
 class Fold:
     """One train/test split (index positions into the observation series)."""
@@ -66,8 +78,7 @@ class PurgedKFold:
             for i in range(n):
                 if i in test:
                     continue
-                overlaps = entry_times[i] <= test_end and exit_times[i] >= test_start
-                if overlaps:
+                if label_overlaps(entry_times[i], exit_times[i], test_start, test_end):
                     continue  # purge: label window overlaps the test window
                 if test_end < entry_times[i] <= embargo_end:
                     continue  # embargo: enters within the buffer after the test fold
