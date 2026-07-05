@@ -1,0 +1,20 @@
+# --- secrets & credentials (never commit) ---
+secrets/
+.env
+.env.*
+# Kite Connect daily access-token / request-token artifacts, wherever they land
+*.token
+*access_token*
+kite_token*
+config/env/*.local.yaml
+
+# --- data caches (never commit market data) ---
+data/
+
+# --- python ---
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
