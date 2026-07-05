@@ -418,13 +418,13 @@ The complete slate under test. **Status is maintained by the building agent** as
 |---|---|---|---|---|---|
 | 2026-07-05 | Phase 0 | ☑ done | `gate-0-foundation` | 61 green; pre-commit clean | Foundation & scaffolding — P0.1–P0.5 to Gate 0 |
 | 2026-07-05 | Phase 1 | ☑ done | `gate-1-data` | 114 green; pre-commit clean | Data & feature layer — P1.1–P1.6 to Gate 1 |
-| — | Phase 2 | ☐ todo | | | Research & validation harness (one session) |
+| 2026-07-05 | Phase 2 | ☑ done | `gate-2-harness` | 173 green; pre-commit clean | Research & validation harness — P2.1–P2.6 to Gate 2 |
 | — | Phase 3 | ☐ todo | | | All 14 single-factor studies (one session) |
 | — | Phase 4 | ☐ todo | | | All 6 multi-factor studies (one session) |
 | — | Phase 4.5 | ☐ todo | | | Optional meta-labeling (one session, gated) |
 | — | Phase 5 | ☐ todo | | | Synthesis & findings (one session) |
 
-**Gate status:** Gate 0 ☑ · Gate 1 ☑ · Gate 2 ☐ · Gate 3 ☐ · Gate 4 ☐ · Gate 4.5 ☐ *(optional)* · Gate 5 ☐
+**Gate status:** Gate 0 ☑ · Gate 1 ☑ · Gate 2 ☑ · Gate 3 ☐ · Gate 4 ☐ · Gate 4.5 ☐ *(optional)* · Gate 5 ☐
 
 ---
 

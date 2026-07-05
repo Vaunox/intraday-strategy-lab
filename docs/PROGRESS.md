@@ -2,7 +2,7 @@
 
 *The authoritative, session-by-session build log. `MASTER_BLUEPRINT.md` Part VI mirrors the top-level status of this file. Update this at the end of **every** session, before the phase PR is opened.*
 
-*Status: Phase 1 (Data & Feature Layer) complete — Gate 1 passed.*
+*Status: Phase 2 (Research & Validation Harness) complete — Gate 2 passed. The research apparatus is complete; strategy testing (Phase 3) may begin.*
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|---|
 | Gate 0 | Foundation & scaffolding | ☑ |
 | Gate 1 | Data & feature layer (Kite historical) | ☑ |
-| Gate 2 | Research & validation harness | ☐ |
+| Gate 2 | Research & validation harness | ☑ |
 | Gate 3 | All 14 single-factor studies | ☐ |
 | Gate 4 | All 6 multi-factor studies | ☐ |
 | Gate 4.5 | Optional meta-labeling *(gated)* | ☐ |
@@ -29,6 +29,7 @@
 | — | — | *(pre-Phase-0 scaffold: docs + directory skeleton only)* | — | — | Blueprint, README, findings scaffold, deep-dive outlines in place |
 | 2026-07-05 | Phase 0 — Foundation | P0.1 tooling + CI + package skeleton · P0.2 layered config + secrets · P0.3 structured logging (IST, correlation IDs, redaction) · P0.4 NSE calendar · P0.5 domain types + interface Protocols | 61 unit tests; ruff + black + mypy (strict) + pytest green; pre-commit clean | branch `feat/p0-foundation` → PR #1 → `main`; tag `gate-0-foundation` | **Gate 0 passed.** Runtime deps kept minimal (pandas/numpy/TA-Lib/pyarrow deferred to the phases that use them). Effective-N DSR spec fix folded in. |
 | 2026-07-05 | Phase 1 — Data & Feature Layer | P1.1 Kite historical adapter + daily auth · P1.2 Parquet archive (immutable raw + adjusted) · P1.3 resumable backfill + script · P1.4 hygiene (corp-actions, survivorship, bad-ticks, gaps, liquidity, ESM/T2T) · P1.5 point-in-time indicator library + dual-path skew harness · P1.6 leakage/skew suite in CI | 114 tests (incl. dual-path skew + adversarial leakage); ruff + black + mypy (strict) + pytest green; pre-commit clean | branch `feat/p1-data-layer` → PR to `main`; tag `gate-1-data` | **Gate 1 passed.** TA-Lib installs via prebuilt wheels (no C build) — CI green. Kite SDK isolated to `data/brokers/` (enforced by a test). |
+| 2026-07-05 | Phase 2 — Research & Validation Harness | P2.1 purged CV + embargo, event-driven backtester (next-bar-open, square-off), full cost model · P2.2 CPCV path distribution + DSR/PSR + PBO via CSCV · P2.3 honest effective-N trial ledger (correlation participation ratio) · P2.4 StrategySpec adapter + reference spec · P2.5 robustness battery + two-engine reconciliation · P2.6 seven-point kill-gate + report + paper updater | 173 tests (incl. hand-computed costs/DSR/PBO, effective-N clustering, two-engine reconciliation, Gate 2 end-to-end); ruff + black + mypy (strict) + pytest green; pre-commit clean | branch `feat/p2-validation-harness` → PR to `main`; tag `gate-2-harness` | **Gate 2 passed.** DSR auto-deflates from the ledger's effective trial count; kill-gate thresholds pinned in `config/killgate.yaml`; the reference spec KILLs (correct honest outcome). scipy added for the (D/P)SR/PBO math. |
 
 ---
 
@@ -38,7 +39,7 @@
 
 | At gate | Variants evaluated → effective-N | Notes |
 |---|---|---|
-| — | 0 → 0 | Ledger not yet initialized (created in Phase 2, P2.3) |
+| Gate 2 | 0 → 0 | Ledger built (P2.3): persists per-trial return streams; effective-N via correlation participation ratio. No study trials logged yet — Phase 3 populates it. |
 
 ---
 
