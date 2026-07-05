@@ -111,16 +111,19 @@ class ParquetArchive:
         symbol: str,
         interval: BarInterval,
         candles: Sequence[Candle],
-        *,
-        overwrite: bool = False,
     ) -> None:
         """Persist ``candles`` to the raw layer, one partition per IST trading date.
 
+        The raw layer is strictly append-only — there is deliberately no overwrite
+        escape hatch on the immutable archive: writing a date that already exists
+        raises, and corrections go to a new version, never a silent in-place
+        mutation (Part III Layer 1). Regenerable corp-action-adjusted candles use
+        :meth:`write_adjusted`.
+
         Raises:
-            PartitionExistsError: If a target raw partition already exists and
-                ``overwrite`` is False (raw is append-only / immutable).
+            PartitionExistsError: If a target raw partition already exists.
         """
-        self._write_layer(_RAW, symbol, interval, candles, overwrite=overwrite, immutable=True)
+        self._write_layer(_RAW, symbol, interval, candles, overwrite=False, immutable=True)
 
     def read_candles(
         self, symbol: str, interval: BarInterval, start: datetime, end: datetime

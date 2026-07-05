@@ -141,3 +141,12 @@ def test_env_var_scalar_is_typed(tmp_path: Path) -> None:
         "dev", config_dir=cfg, environ={"LAB__CALENDAR__TIMEZONE": "Asia/Kolkata"}
     )
     assert settings.calendar.timezone == "Asia/Kolkata"
+
+
+def test_india_tz_constant_matches_config_timezone() -> None:
+    # The INDIA_TZ fallback constant (used as a default in Phase-2 modules) must not
+    # silently drift from the authoritative config value everything derives IST from.
+    from lab.core.constants import INDIA_TZ
+
+    settings = load_settings("dev", config_dir=REPO_CONFIG, environ={})
+    assert settings.calendar.timezone == INDIA_TZ

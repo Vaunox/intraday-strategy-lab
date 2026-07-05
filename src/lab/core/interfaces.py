@@ -10,7 +10,7 @@ without inheritance.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol, runtime_checkable
 
 from lab.core.types import BarInterval, Candle, StrategySignal
@@ -74,6 +74,14 @@ class Repository(Protocol):
         end: datetime,
     ) -> Sequence[Candle]:
         """Return stored candles for ``symbol``/``interval`` within ``[start, end]``."""
+        ...
+
+    def stored_dates(self, symbol: str, interval: BarInterval) -> Sequence[date]:
+        """Return the trading dates already stored for ``symbol``/``interval``.
+
+        Lets a resumable backfill (P1.3) skip completed days without re-fetching
+        or duplicating; a store with no notion of partitioning may return empty.
+        """
         ...
 
 

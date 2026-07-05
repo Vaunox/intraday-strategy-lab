@@ -12,7 +12,8 @@ recorded fixtures instead of the network.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import time
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
@@ -27,6 +28,18 @@ _log = get_logger("data.brokers.kite")
 API_KEY_SECRET = "KITE_API_KEY"  # noqa: S105 — secret NAME (env-var key), not a value
 API_SECRET_SECRET = "KITE_API_SECRET"  # noqa: S105 — secret NAME, not a value
 ACCESS_TOKEN_SECRET = "KITE_ACCESS_TOKEN"  # noqa: S105 — secret NAME, not a value
+
+#: Kite serves historical data at ~3 requests/sec; keep just under that.
+DEFAULT_REQUEST_INTERVAL = 0.34
+
+
+def _is_rate_limit(exc: BaseException) -> bool:
+    """Whether an SDK error is a rate-limit ("Too many requests").
+
+    Matched on the message rather than importing ``kiteconnect.exceptions`` so this
+    module stays importable without the SDK (which is imported only lazily).
+    """
+    return "too many requests" in str(exc).lower()
 
 
 @runtime_checkable
@@ -152,10 +165,53 @@ class KiteAdapter:
         instrument_tokens: Mapping[str, int],
         *,
         fetch_oi: bool = False,
+        request_interval: float = DEFAULT_REQUEST_INTERVAL,
+        max_retries: int = 5,
+        backoff_base: float = 1.0,
+        sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._client = client
         self._tokens = dict(instrument_tokens)
         self._fetch_oi = fetch_oi
+        self._request_interval = request_interval
+        self._max_retries = max_retries
+        self._backoff_base = backoff_base
+        self._sleep = sleep
+        self._clock = clock
+        self._last_request = 0.0
+
+    def _throttle(self) -> None:
+        """Space requests to respect Kite's historical rate limit (~3/sec)."""
+        if self._request_interval <= 0.0:
+            return
+        elapsed = self._clock() - self._last_request
+        if 0.0 <= elapsed < self._request_interval:
+            self._sleep(self._request_interval - elapsed)
+        self._last_request = self._clock()
+
+    def _historical_data(
+        self, token: int, start: datetime, end: datetime, interval_value: str
+    ) -> list[dict[str, Any]]:
+        """Call the SDK with a rate-limit throttle and exponential-backoff retry.
+
+        A transient "Too many requests" (429) is retried up to ``max_retries``
+        times so a burst of small gap-fill fetches cannot abort the whole backfill;
+        any other error propagates immediately.
+        """
+        for attempt in range(self._max_retries + 1):
+            self._throttle()
+            try:
+                return self._client.historical_data(
+                    token, start, end, interval_value, continuous=False, oi=self._fetch_oi
+                )
+            except Exception as exc:  # re-raised below unless it is a transient rate limit
+                if not _is_rate_limit(exc) or attempt == self._max_retries:
+                    raise
+                wait = self._backoff_base * (2.0**attempt)
+                _log.warning("kite_rate_limited", attempt=attempt + 1, wait_seconds=wait)
+                self._sleep(wait)
+        raise RuntimeError("unreachable retry loop")  # pragma: no cover
 
     @classmethod
     def from_secrets(
@@ -209,7 +265,25 @@ class KiteAdapter:
             start=start.isoformat(),
             end=end.isoformat(),
         )
-        rows = self._client.historical_data(
-            token, start, end, interval.value, continuous=False, oi=self._fetch_oi
-        )
-        return [candle_from_kite_row(symbol, interval, row) for row in rows]
+        rows = self._historical_data(token, start, end, interval.value)
+        candles: list[Candle] = []
+        dropped: list[str] = []
+        for row in rows:
+            try:
+                candles.append(candle_from_kite_row(symbol, interval, row))
+            except (ValueError, KeyError, TypeError) as exc:
+                # Kite occasionally emits corrupt bars (e.g. a zero/blank price on a
+                # thin day). Skipping them is correct — they are not real trades — but
+                # never silently: keep Candle strict and log a per-fetch count so the
+                # data loss is auditable, not a crash that aborts the whole backfill.
+                dropped.append(str(exc))
+        if dropped:
+            _log.warning(
+                "dropped_invalid_candles",
+                symbol=symbol,
+                interval=interval.value,
+                dropped=len(dropped),
+                kept=len(candles),
+                first_reason=dropped[0],
+            )
+        return candles

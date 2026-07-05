@@ -10,8 +10,8 @@ immutable raw archive, one partition per IST trading day. It is:
   run resumes without re-fetching or duplicating (raw immutability guarantees no
   silent overwrite).
 
-Depends on the ``BrokerAdapter`` Protocol; the concrete store is the partitioned
-``ParquetArchive`` (whose ``stored_dates`` drives resume).
+Depends only on the ``BrokerAdapter`` and ``Repository`` Protocols (never a
+concrete store); ``Repository.stored_dates`` drives the resume.
 """
 
 from __future__ import annotations
@@ -20,11 +20,10 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import date
 
-from lab.core.interfaces import BrokerAdapter
+from lab.core.interfaces import BrokerAdapter, Repository
 from lab.core.logging import get_logger
 from lab.core.nse_calendar import NseCalendar
 from lab.core.types import BarInterval
-from lab.data.store.parquet_archive import ParquetArchive
 
 _log = get_logger("data.ingest.backfill")
 
@@ -59,7 +58,7 @@ class Backfiller:
     def __init__(
         self,
         adapter: BrokerAdapter,
-        archive: ParquetArchive,
+        archive: Repository,
         calendar: NseCalendar,
         *,
         max_window_days: int = DEFAULT_MAX_WINDOW_DAYS,

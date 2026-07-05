@@ -36,6 +36,11 @@ def monte_carlo_sign_flip(
 
     Each shuffle multiplies every return by a random +/-1 (a no-directional-edge
     null); a genuine edge beats most of them. Kill-gate bar: >= 0.95.
+
+    This is the blueprint's criterion-6 "trade-shuffle": a literal order-shuffle
+    leaves the Sharpe (mean/sigma) unchanged because it is order-invariant, so the
+    sign-flip is the meaningful null. See the P2.5 amendment note in
+    ``MASTER_BLUEPRINT.md`` — a deliberate substitution, not an oversight.
     """
     values = np.asarray(returns, dtype=np.float64)
     if values.size < 2:

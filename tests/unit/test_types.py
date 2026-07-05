@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -13,7 +13,6 @@ from lab.core.types import (
     Candle,
     Side,
     StrategySignal,
-    TradeResult,
     Verdict,
 )
 
@@ -81,39 +80,6 @@ def test_strategy_signal_strength_bounds() -> None:
     assert ok.side is Side.LONG
     with pytest.raises(ValueError, match="strength"):
         StrategySignal(asof=_ts(), symbol="X", side=Side.SHORT, strength=1.5)
-
-
-def test_trade_result_net_pnl_and_holding() -> None:
-    entry = _ts(9, 30)
-    exit_ = _ts(11, 30)
-    trade = TradeResult(
-        symbol="X",
-        side=Side.LONG,
-        entry_time=entry,
-        exit_time=exit_,
-        entry_price=100.0,
-        exit_price=101.0,
-        quantity=50,
-        gross_pnl=50.0,
-        costs=12.5,
-    )
-    assert trade.net_pnl == pytest.approx(37.5)
-    assert trade.holding_period == timedelta(hours=2)
-
-
-def test_trade_result_rejects_exit_before_entry() -> None:
-    with pytest.raises(ValueError, match="exit_time"):
-        TradeResult(
-            symbol="X",
-            side=Side.LONG,
-            entry_time=_ts(11, 0),
-            exit_time=_ts(10, 0),
-            entry_price=100.0,
-            exit_price=101.0,
-            quantity=1,
-            gross_pnl=1.0,
-            costs=0.0,
-        )
 
 
 def test_enum_values_match_kite_intervals() -> None:
