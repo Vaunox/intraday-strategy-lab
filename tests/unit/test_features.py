@@ -191,3 +191,61 @@ def test_feature_config_rejects_unknown_key() -> None:
 def test_feature_config_rejects_non_positive_value() -> None:
     with pytest.raises(ValueError, match="positive"):
         FeatureConfig.from_mapping({"sma_period": -5})
+
+
+# --- new Layer-1 families (P1.5 completion) --------------------------------- #
+def test_full_feature_family_count() -> None:
+    assert len(FEATURE_NAMES) == 42
+    assert len(compute_features(_synthetic())) == 42
+
+
+def test_momentum_known_value() -> None:
+    m = indicators.momentum(_ramp([1, 1, 2, 4]), period=2)
+    assert math.isnan(m[1])
+    assert m[2] == pytest.approx(2.0 / 1.0 - 1)  # close[2]/close[0] - 1
+    assert m[3] == pytest.approx(4.0 / 1.0 - 1)  # close[3]/close[1] - 1
+
+
+def test_fibonacci_pivot_known_value() -> None:
+    d1 = datetime(2024, 7, 15, 9, 15, tzinfo=IST)
+    d2 = datetime(2024, 7, 16, 9, 15, tzinfo=IST)
+    candles = [
+        Candle("P", BarInterval.MIN_5, d1, 100, 110, 90, 100, 1000),  # H110 L90 C100
+        Candle("P", BarInterval.MIN_5, d2, 100, 101, 99, 100, 1000),
+    ]
+    r1, s1 = indicators.fibonacci_pivot_levels(_ohlcv(candles))
+    assert math.isnan(r1[0])
+    assert r1[1] == pytest.approx(100 + 0.382 * 20)  # pivot 100, range 20
+    assert s1[1] == pytest.approx(100 - 0.382 * 20)
+
+
+def test_swing_high_confirms_local_max() -> None:
+    highs = [10, 11, 12, 20, 12, 11, 10]  # clear peak (20) at index 3
+    candles = [
+        Candle(
+            "S",
+            BarInterval.MIN_5,
+            datetime(2024, 7, 15, 9, 15, tzinfo=IST) + timedelta(minutes=5 * i),
+            h - 1.0,
+            float(h),
+            h - 2.0,
+            h - 1.0,
+            1000,
+        )
+        for i, h in enumerate(highs)
+    ]
+    swing = indicators.swing_high(_ohlcv(candles), window=2)
+    assert math.isnan(swing[4])  # not yet confirmed
+    assert swing[5] == 20.0  # confirmed 2 bars after the peak
+    assert swing[6] == 20.0  # carried forward
+
+
+def test_cross_sectional_rank_is_point_in_time() -> None:
+    panel = {
+        "A": np.array([1.0, 5.0]),
+        "B": np.array([2.0, 4.0]),
+        "C": np.array([3.0, 3.0]),
+    }
+    ranks = indicators.cross_sectional_rank(panel)
+    assert (ranks["A"][0], ranks["B"][0], ranks["C"][0]) == (0.0, 0.5, 1.0)
+    assert (ranks["A"][1], ranks["B"][1], ranks["C"][1]) == (1.0, 0.5, 0.0)

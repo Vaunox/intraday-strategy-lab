@@ -49,6 +49,25 @@ FEATURE_NAMES: tuple[str, ...] = (
     "gap",
     "or_high",
     "or_low",
+    "plus_di",
+    "minus_di",
+    "parkinson_vol",
+    "garman_klass_vol",
+    "atr_upper",
+    "atr_lower",
+    "momentum",
+    "pullback_depth",
+    "swing_high",
+    "swing_low",
+    "cdl_engulfing",
+    "cdl_doji",
+    "tod_sin",
+    "tod_cos",
+    "trend_regime",
+    "pivot_fib_r1",
+    "pivot_fib_s1",
+    "pivot_cam_r1",
+    "pivot_cam_s1",
 )
 
 
@@ -71,6 +90,15 @@ class FeatureConfig:
     relative_volume_period: int = 20
     realized_vol_period: int = 20
     opening_range_minutes: int = 15
+    di_period: int = 14
+    parkinson_period: int = 20
+    garman_klass_period: int = 20
+    atr_band_num: float = 2.0
+    momentum_period: int = 10
+    pullback_period: int = 20
+    swing_window: int = 3
+    trend_fast: int = 10
+    trend_slow: int = 30
 
     def __post_init__(self) -> None:
         """Validate every parameter is a positive number (fail loudly on bad config)."""
@@ -108,6 +136,10 @@ def compute_features(data: OHLCV, config: FeatureConfig | None = None) -> dict[s
     bb_upper, bb_middle, bb_lower = indicators.bollinger(data, cfg.bb_period, cfg.bb_num_std)
     donchian_upper, donchian_lower = indicators.donchian(data, cfg.donchian_period)
     or_high, or_low = indicators.opening_range(data, cfg.opening_range_minutes)
+    atr_upper, atr_lower = indicators.atr_bands(data, cfg.atr_period, cfg.atr_band_num)
+    tod_sin, tod_cos = indicators.time_of_day_encoding(data)
+    fib_r1, fib_s1 = indicators.fibonacci_pivot_levels(data)
+    cam_r1, cam_s1 = indicators.camarilla_pivot_levels(data)
 
     return {
         "sma": indicators.sma(data, cfg.sma_period),
@@ -133,6 +165,25 @@ def compute_features(data: OHLCV, config: FeatureConfig | None = None) -> dict[s
         "gap": indicators.gap(data),
         "or_high": or_high,
         "or_low": or_low,
+        "plus_di": indicators.plus_di(data, cfg.di_period),
+        "minus_di": indicators.minus_di(data, cfg.di_period),
+        "parkinson_vol": indicators.parkinson_volatility(data, cfg.parkinson_period),
+        "garman_klass_vol": indicators.garman_klass_volatility(data, cfg.garman_klass_period),
+        "atr_upper": atr_upper,
+        "atr_lower": atr_lower,
+        "momentum": indicators.momentum(data, cfg.momentum_period),
+        "pullback_depth": indicators.pullback_depth(data, cfg.pullback_period),
+        "swing_high": indicators.swing_high(data, cfg.swing_window),
+        "swing_low": indicators.swing_low(data, cfg.swing_window),
+        "cdl_engulfing": indicators.engulfing(data),
+        "cdl_doji": indicators.doji(data),
+        "tod_sin": tod_sin,
+        "tod_cos": tod_cos,
+        "trend_regime": indicators.trend_regime(data, cfg.trend_fast, cfg.trend_slow),
+        "pivot_fib_r1": fib_r1,
+        "pivot_fib_s1": fib_s1,
+        "pivot_cam_r1": cam_r1,
+        "pivot_cam_s1": cam_s1,
     }
 
 
