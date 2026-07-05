@@ -1,0 +1,29 @@
+# Indian intraday (MIS) cost model — STATUTORY rates.
+#
+# Statutory rates drift; they live here, never hard-coded in the backtester
+# (Part III Layer 2, Inviolable Rule 3). All rates are fractions of turnover
+# unless noted. NO DP charge — that applies to delivery (CNC) sells, not MIS
+# intraday. A round trip is one buy + one sell.
+
+brokerage:
+  rate: 0.0003        # 0.03% of order value...
+  cap: 20.0           # ...but capped at ₹20 per executed order (lower of the two)
+
+stt:
+  sell_rate: 0.00025  # Securities Transaction Tax: 0.025% on the SELL side (intraday equity)
+
+exchange_txn:
+  rate: 0.0000297     # NSE exchange transaction charge ≈ 0.00297% per side
+
+sebi_turnover:
+  rate: 0.000001      # SEBI turnover fee: ₹10 per crore = 0.0001% per side
+
+stamp:
+  buy_rate: 0.00003   # Stamp duty: 0.003% on the BUY side
+
+gst:
+  rate: 0.18          # 18% GST on (brokerage + exchange txn + SEBI turnover fee)
+
+slippage:
+  base_rate: 0.0005       # 0.05% per side in normal conditions
+  stress_multiplier: 3.0  # widen slippage in stressed/illiquid conditions

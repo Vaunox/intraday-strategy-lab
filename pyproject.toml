@@ -21,6 +21,7 @@ dependencies = [
     "pyarrow>=16",        # Parquet storage engine (P1.2)
     "ta-lib>=0.6",        # standard technical indicators (P1.5)
     "kiteconnect>=5.0",   # Kite Connect SDK — imported ONLY in data/brokers/ (P1.1)
+    "scipy>=1.11",        # normal CDF/PPF, skew/kurtosis for DSR/PSR/PBO (P2.2)
 ]
 
 [dependency-groups]
@@ -116,9 +117,10 @@ module = ["talib", "talib.*", "kiteconnect", "kiteconnect.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-# pyarrow ships incomplete inline types; skip following it so its calls are Any
-# at the boundary rather than "untyped call" errors. Our signatures stay typed.
-module = ["pyarrow", "pyarrow.*"]
+# pyarrow and scipy ship incomplete inline types; skip following them so their
+# calls are Any at the boundary rather than "untyped call" errors. Our
+# signatures stay typed.
+module = ["pyarrow", "pyarrow.*", "scipy", "scipy.*"]
 follow_imports = "skip"
 ignore_missing_imports = true
 
