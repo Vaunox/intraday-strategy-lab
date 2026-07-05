@@ -246,3 +246,181 @@ def gap(data: OHLCV) -> FloatArray:
         if value is not None:
             out[i] = value
     return out
+
+
+# --- additional Layer-1 families (P1.5 completion) -------------------------- #
+def plus_di(data: OHLCV, period: int) -> FloatArray:
+    """Positive directional indicator (+DI) of the DMI."""
+    result: FloatArray = talib.PLUS_DI(data.high, data.low, data.close, timeperiod=period)
+    return result
+
+
+def minus_di(data: OHLCV, period: int) -> FloatArray:
+    """Negative directional indicator (-DI) of the DMI."""
+    result: FloatArray = talib.MINUS_DI(data.high, data.low, data.close, timeperiod=period)
+    return result
+
+
+def parkinson_volatility(data: OHLCV, period: int) -> FloatArray:
+    """Rolling Parkinson high-low range volatility estimator."""
+    out = _empty(len(data))
+    log_hl_sq = np.log(data.high / data.low) ** 2
+    if len(data) >= period:
+        windows = sliding_window_view(log_hl_sq, period)
+        factor = 1.0 / (4.0 * period * np.log(2.0))
+        out[period - 1 :] = np.sqrt(factor * windows.sum(axis=1))
+    return out
+
+
+def garman_klass_volatility(data: OHLCV, period: int) -> FloatArray:
+    """Rolling Garman-Klass OHLC volatility estimator."""
+    out = _empty(len(data))
+    term = (
+        0.5 * np.log(data.high / data.low) ** 2
+        - (2.0 * np.log(2.0) - 1.0) * np.log(data.close / data.open) ** 2
+    )
+    if len(data) >= period:
+        windows = sliding_window_view(term, period)
+        out[period - 1 :] = np.sqrt(np.clip(windows.mean(axis=1), 0.0, None))
+    return out
+
+
+def atr_bands(data: OHLCV, period: int, num_atr: float) -> tuple[FloatArray, FloatArray]:
+    """ATR-based bands/stops: close +/- num_atr * ATR."""
+    band = atr(data, period) * num_atr
+    return data.close + band, data.close - band
+
+
+def momentum(data: OHLCV, period: int) -> FloatArray:
+    """Rate of change of close over ``period`` bars."""
+    out = _empty(len(data))
+    if len(data) > period:
+        out[period:] = data.close[period:] / data.close[:-period] - 1.0
+    return out
+
+
+def pullback_depth(data: OHLCV, period: int) -> FloatArray:
+    """Fractional pullback of close from the rolling ``period``-bar high."""
+    rolling_high = _rolling(data.high, period, use_max=True)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out: FloatArray = np.where(
+            rolling_high > 0, (rolling_high - data.close) / rolling_high, np.nan
+        )
+    return out
+
+
+def _confirmed_swing(values: FloatArray, window: int, *, high: bool) -> FloatArray:
+    """Last confirmed swing level (point-in-time: a swing is confirmed ``window`` bars later)."""
+    out = _empty(len(values))
+    last = float("nan")
+    for i in range(len(values)):
+        pivot_idx = i - window
+        if pivot_idx - window >= 0:
+            segment = values[pivot_idx - window : pivot_idx + window + 1]
+            center = float(values[pivot_idx])
+            extreme = float(segment.max()) if high else float(segment.min())
+            if center == extreme and int(np.sum(segment == center)) == 1:
+                last = center
+        out[i] = last
+    return out
+
+
+def swing_high(data: OHLCV, window: int) -> FloatArray:
+    """Most recent confirmed swing-high price (uses only past bars)."""
+    return _confirmed_swing(data.high, window, high=True)
+
+
+def swing_low(data: OHLCV, window: int) -> FloatArray:
+    """Most recent confirmed swing-low price (uses only past bars)."""
+    return _confirmed_swing(data.low, window, high=False)
+
+
+def engulfing(data: OHLCV) -> FloatArray:
+    """Bullish/bearish engulfing candlestick signal (TA-Lib CDLENGULFING)."""
+    result: FloatArray = talib.CDLENGULFING(data.open, data.high, data.low, data.close).astype(
+        np.float64
+    )
+    return result
+
+
+def doji(data: OHLCV) -> FloatArray:
+    """Doji candlestick signal (TA-Lib CDLDOJI)."""
+    result: FloatArray = talib.CDLDOJI(data.open, data.high, data.low, data.close).astype(
+        np.float64
+    )
+    return result
+
+
+def time_of_day_encoding(data: OHLCV) -> tuple[FloatArray, FloatArray]:
+    """Cyclical (sin, cos) encoding of the bar's time of day."""
+    minutes = np.array([ts.hour * 60 + ts.minute for ts in data.timestamps], dtype=np.float64)
+    angle = 2.0 * np.pi * minutes / (24.0 * 60.0)
+    return np.sin(angle), np.cos(angle)
+
+
+def trend_regime(data: OHLCV, fast: int, slow: int) -> FloatArray:
+    """Trend-regime sign: +1 fast MA above slow MA, -1 below (NaN in warmup)."""
+    result: FloatArray = np.sign(sma(data, fast) - sma(data, slow))
+    return result
+
+
+def _prior_day_lookup(
+    data: OHLCV,
+) -> tuple[dict[date, tuple[float, float, float]], dict[date, date]]:
+    daily = _daily_hlc(data)
+    ordered = list(daily)
+    prior_by_date = {ordered[k]: ordered[k - 1] for k in range(1, len(ordered))}
+    return daily, prior_by_date
+
+
+def fibonacci_pivot_levels(data: OHLCV) -> tuple[FloatArray, FloatArray]:
+    """Fibonacci pivot R1/S1 from the prior day's HLC (point-in-time)."""
+    out_r1 = _empty(len(data))
+    out_s1 = _empty(len(data))
+    daily, prior_by_date = _prior_day_lookup(data)
+    for i, ts in enumerate(data.timestamps):
+        prior = prior_by_date.get(ts.date())
+        if prior is not None:
+            high, low, close = daily[prior]
+            pivot_point = (high + low + close) / 3.0
+            span = high - low
+            out_r1[i] = pivot_point + 0.382 * span
+            out_s1[i] = pivot_point - 0.382 * span
+    return out_r1, out_s1
+
+
+def camarilla_pivot_levels(data: OHLCV) -> tuple[FloatArray, FloatArray]:
+    """Camarilla pivot R1/S1 from the prior day's HLC (point-in-time)."""
+    out_r1 = _empty(len(data))
+    out_s1 = _empty(len(data))
+    daily, prior_by_date = _prior_day_lookup(data)
+    for i, ts in enumerate(data.timestamps):
+        prior = prior_by_date.get(ts.date())
+        if prior is not None:
+            high, low, close = daily[prior]
+            span = high - low
+            out_r1[i] = close + 1.1 * span / 12.0
+            out_s1[i] = close - 1.1 * span / 12.0
+    return out_r1, out_s1
+
+
+def cross_sectional_rank(values_by_symbol: dict[str, FloatArray]) -> dict[str, FloatArray]:
+    """Point-in-time cross-sectional rank of each symbol at each timestamp.
+
+    Ranks are in [0, 1] per timestamp across the panel (higher value -> higher
+    rank); uses only same-timestamp values, so it is not lookahead. Panel arrays
+    must be aligned and equal length. NaNs are ignored in the ranking.
+    """
+    symbols = list(values_by_symbol)
+    if not symbols:
+        return {}
+    matrix = np.vstack([values_by_symbol[s] for s in symbols])  # (n_symbols, T)
+    ranks = np.full_like(matrix, np.nan)
+    for t in range(matrix.shape[1]):
+        column = matrix[:, t]
+        valid = ~np.isnan(column)
+        count = int(valid.sum())
+        if count >= 2:
+            order = column[valid].argsort().argsort().astype(np.float64)
+            ranks[valid, t] = order / (count - 1)
+    return {symbol: ranks[i] for i, symbol in enumerate(symbols)}
