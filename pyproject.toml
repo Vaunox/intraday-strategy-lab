@@ -10,14 +10,17 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
-# Phase 0 runtime dependencies only. The data/feature stack (pandas, numpy,
-# pyarrow, TA-Lib) and the research stack arrive with the phases that need them
-# (P1.x, P2.x) so CI stays fast and green and no unused heavy/native
-# dependency is pinned before it is used. See MASTER_BLUEPRINT.md Part I §2.
+# Runtime dependencies. The research stack (validation/ML) arrives in Phase 2.
+# TA-Lib ships prebuilt wheels (no local C build), keeping CI green.
 dependencies = [
     "pyyaml>=6.0.1",      # layered YAML config loader (P0.2)
     "structlog>=24.1.0",  # structured logging configured once in core/ (P0.3)
     "tzdata>=2024.1",     # IANA tz database for zoneinfo IST on Windows (P0.3/P0.4)
+    "numpy>=1.26",        # numerics under the indicators (P1.5)
+    "pandas>=2.2",        # OHLCV frames, resampling, hygiene (P1.x)
+    "pyarrow>=16",        # Parquet storage engine (P1.2)
+    "ta-lib>=0.6",        # standard technical indicators (P1.5)
+    "kiteconnect>=5.0",   # Kite Connect SDK — imported ONLY in data/brokers/ (P1.1)
 ]
 
 [dependency-groups]
@@ -29,6 +32,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "pre-commit>=3.8.0",
     "types-PyYAML>=6.0.12",
+    "pandas-stubs>=2.2",
 ]
 
 [build-system]
@@ -98,6 +102,18 @@ strict = true
 warn_unreachable = true
 enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool"]
 exclude = ["notebooks/"]
+
+[[tool.mypy.overrides]]
+# Third-party SDKs without type stubs — stay strict on our code, tolerate theirs.
+module = ["talib", "talib.*", "kiteconnect", "kiteconnect.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# pyarrow ships incomplete inline types; skip following it so its calls are Any
+# at the boundary rather than "untyped call" errors. Our signatures stay typed.
+module = ["pyarrow", "pyarrow.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
 
 # --------------------------------------------------------------------------- #
 # pytest                                                                       #
