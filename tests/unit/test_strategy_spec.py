@@ -85,7 +85,13 @@ def test_reference_spec_runs_end_to_end_through_cpcv() -> None:
     costs = load_cost_model(REPO_CONFIG)
     result = run_strategy(ReferenceMomentumSpec(), _synthetic(), costs)
     cpcv = combinatorial_purged_cv(
-        result.net_returns, n_groups=5, k_test_groups=2, periods_per_year=18750.0
+        result.net_returns,
+        result.entry_times,
+        result.exit_times,
+        n_groups=5,
+        k_test_groups=2,
+        periods_per_year=18750.0,
+        embargo=timedelta(0),  # compressed synthetic span; embargo exercised in test_cpcv_pbo
     )
     assert len(cpcv.path_sharpes) == 10  # C(5,2)
     assert math.isfinite(cpcv.median_path_sharpe)

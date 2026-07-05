@@ -77,6 +77,30 @@ def test_stress_widens_slippage() -> None:
     )
 
 
+def test_slippage_grows_with_participation() -> None:
+    costs = load_cost_model(REPO_CONFIG)
+    small = costs.round_trip_cost_fraction(100_000, participation=0.001)
+    large = costs.round_trip_cost_fraction(100_000, participation=0.05)
+    flat = costs.round_trip_cost_fraction(100_000, participation=0.0)
+    assert flat < small < large  # bigger order in the same bar pays more slippage
+
+
+def test_participation_is_capped() -> None:
+    costs = load_cost_model(REPO_CONFIG)
+    at_cap = costs.round_trip_cost_fraction(100_000, participation=costs.slippage_participation_cap)
+    beyond = costs.round_trip_cost_fraction(100_000, participation=10_000.0)
+    assert beyond == pytest.approx(at_cap)  # a thin/zero-volume bar cannot explode the cost
+
+
+def test_trade_cost_fraction_uses_bar_liquidity() -> None:
+    from lab.research.validation.costs import trade_cost_fraction
+
+    costs = load_cost_model(REPO_CONFIG)
+    thick = trade_cost_fraction(costs, 100_000, entry_price=100.0, entry_volume=1_000_000.0)
+    thin = trade_cost_fraction(costs, 100_000, entry_price=100.0, entry_volume=10_000.0)
+    assert thin > thick  # same order, thinner bar -> higher participation -> higher cost
+
+
 # --- backtester ------------------------------------------------------------- #
 def _bar(minute: int, open_: float, high: float, low: float, close: float) -> Candle:
     ts = datetime(2024, 7, 15, 9, minute, tzinfo=IST)

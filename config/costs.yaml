@@ -25,5 +25,7 @@ gst:
   rate: 0.18          # 18% GST on (brokerage + exchange txn + SEBI turnover fee)
 
 slippage:
-  base_rate: 0.0005       # 0.05% per side in normal conditions
-  stress_multiplier: 3.0  # widen slippage in stressed/illiquid conditions
+  base_rate: 0.0005          # 0.05% per side, fixed floor in normal conditions
+  impact_coefficient: 0.002  # square-root market impact: +coeff*sqrt(participation) per side
+  participation_cap: 0.10    # cap order participation in a bar's traded value at 10%
+  stress_multiplier: 3.0     # widen slippage in stressed/illiquid conditions

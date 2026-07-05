@@ -23,7 +23,7 @@ import numpy.typing as npt
 
 from lab.core.constants import INDIA_TZ
 from lab.core.types import Candle, Side
-from lab.research.validation.costs import CostModel
+from lab.research.validation.costs import CostModel, trade_cost_fraction
 
 FloatArray = npt.NDArray[np.float64]
 
@@ -104,11 +104,11 @@ def run_backtest(
     if len(candles) != len(target_positions):
         raise ValueError("candles and target_positions must have equal length")
     tz = ZoneInfo(timezone)
-    cost_fraction = cost_model.round_trip_cost_fraction(notional_per_trade)
 
     trades: list[Trade] = []
     side: Side | None = None
     entry_price = 0.0
+    entry_volume = 0.0
     entry_time: datetime | None = None
 
     def close(exit_price: float, exit_time: datetime) -> None:
@@ -117,6 +117,9 @@ def run_backtest(
             raise RuntimeError("close() called with no open position")
         direction = 1.0 if side is Side.LONG else -1.0
         gross = direction * (exit_price / entry_price - 1.0)
+        cost_fraction = trade_cost_fraction(
+            cost_model, notional_per_trade, entry_price, entry_volume
+        )
         trades.append(
             Trade(side, entry_time, exit_time, entry_price, exit_price, gross, cost_fraction)
         )
@@ -139,6 +142,7 @@ def run_backtest(
                 if desired is not None:
                     side = desired
                     entry_price = candle.open
+                    entry_volume = float(candle.volume)
                     entry_time = candle.timestamp
 
         # Intraday square-off: force flat at the day's last bar (exit at its close).
