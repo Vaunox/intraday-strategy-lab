@@ -1,0 +1,52 @@
+# Pre-commit runs lint, format, type-check, and tests BEFORE every commit
+# (Part I §6). Tool versions have a single source of truth — the project's
+# locked dev dependencies — so the local hooks invoke them via `uv run` rather
+# than pinning a second, drifting copy here. Requires `uv sync` first
+# (see README). Install with: uv run pre-commit install
+minimum_pre_commit_version: "3.8.0"
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff (lint)
+        entry: uv run ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: black
+        name: black (format)
+        entry: uv run black
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: mypy
+        name: mypy (type-check)
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true

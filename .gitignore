@@ -9,12 +9,38 @@ kite_token*
 config/env/*.local.yaml
 
 # --- data caches (never commit market data) ---
-data/
+# Anchored to the repo root so it ignores the local Kite cache at /data/ WITHOUT
+# also swallowing the src/lab/data/ source package.
+/data/
 
 # --- python ---
 __pycache__/
 *.pyc
 .venv/
+venv/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# --- packaging / build artifacts ---
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- test / coverage artifacts ---
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache/
+
+# --- editors & OS cruft ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# NOTE: uv.lock is intentionally NOT ignored — it is committed for
+# reproducible, deterministic installs (Part I §7).
