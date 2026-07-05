@@ -51,39 +51,154 @@ calendar:
     post_close_start: "15:40" # post-close (closing) session begins
     post_close_end: "16:00"   # post-close session ends
 
-  # NSE trading holidays on which the regular session is closed (IST), sourced
-  # from official NSE circulars. Weekends are structural and not listed here.
-  # Diwali Muhurat evenings are treated as holidays for the regular daytime
-  # session. Extend this list against the official circular as the backfill
-  # date range is fixed in Phase 1 (P1.4).
+  # NSE trading holidays on which the regular session is closed (IST). Weekends
+  # are structural and not listed. NSE and BSE share the same equity holidays, so
+  # this list is GENERATED from the maintained exchange_calendars XBOM calendar
+  # (weekday non-sessions) — see scripts/generate_nse_holidays.py — rather than
+  # hand-typed, which also captures special/ad-hoc holidays (e.g. election days).
+  # Diwali Muhurat days are treated as holidays for the regular daytime session.
+  # Regenerate to extend the range as the backfill window grows.
   holidays:
+    # --- 2018 ---
+    - "2018-01-26"
+    - "2018-02-13"
+    - "2018-03-02"
+    - "2018-03-29"
+    - "2018-03-30"
+    - "2018-05-01"
+    - "2018-08-15"
+    - "2018-08-22"
+    - "2018-09-13"
+    - "2018-09-20"
+    - "2018-10-02"
+    - "2018-10-18"
+    - "2018-11-07"
+    - "2018-11-08"
+    - "2018-11-23"
+    - "2018-12-25"
+    # --- 2019 ---
+    - "2019-03-04"
+    - "2019-03-21"
+    - "2019-04-17"
+    - "2019-04-19"
+    - "2019-04-29"
+    - "2019-05-01"
+    - "2019-06-05"
+    - "2019-08-12"
+    - "2019-08-15"
+    - "2019-09-02"
+    - "2019-09-10"
+    - "2019-10-02"
+    - "2019-10-08"
+    - "2019-10-21"
+    - "2019-10-28"
+    - "2019-11-12"
+    - "2019-12-25"
+    # --- 2020 ---
+    - "2020-02-21"
+    - "2020-03-10"
+    - "2020-04-02"
+    - "2020-04-06"
+    - "2020-04-10"
+    - "2020-04-14"
+    - "2020-05-01"
+    - "2020-05-25"
+    - "2020-10-02"
+    - "2020-11-16"
+    - "2020-11-30"
+    - "2020-12-25"
+    # --- 2021 ---
+    - "2021-01-26"
+    - "2021-03-11"
+    - "2021-03-29"
+    - "2021-04-02"
+    - "2021-04-14"
+    - "2021-04-21"
+    - "2021-05-13"
+    - "2021-07-21"
+    - "2021-08-19"
+    - "2021-09-10"
+    - "2021-10-15"
+    - "2021-11-04"
+    - "2021-11-05"
+    - "2021-11-19"
+    # --- 2022 ---
+    - "2022-01-26"
+    - "2022-03-01"
+    - "2022-03-18"
+    - "2022-04-14"
+    - "2022-04-15"
+    - "2022-05-03"
+    - "2022-08-09"
+    - "2022-08-15"
+    - "2022-08-31"
+    - "2022-10-05"
+    - "2022-10-24"
+    - "2022-10-26"
+    - "2022-11-08"
+    # --- 2023 ---
+    - "2023-01-26"
+    - "2023-03-07"
+    - "2023-03-30"
+    - "2023-04-04"
+    - "2023-04-07"
+    - "2023-04-14"
+    - "2023-05-01"
+    - "2023-06-29"
+    - "2023-08-15"
+    - "2023-09-19"
+    - "2023-10-02"
+    - "2023-10-24"
+    - "2023-11-14"
+    - "2023-11-27"
+    - "2023-12-25"
     # --- 2024 ---
-    - "2024-01-26"  # Republic Day
-    - "2024-03-08"  # Mahashivratri
-    - "2024-03-25"  # Holi
-    - "2024-03-29"  # Good Friday
-    - "2024-04-11"  # Id-ul-Fitr (Ramzan Id)
-    - "2024-04-17"  # Ram Navami
-    - "2024-05-01"  # Maharashtra Day
-    - "2024-06-17"  # Bakri Id
-    - "2024-07-17"  # Muharram
-    - "2024-08-15"  # Independence Day
-    - "2024-10-02"  # Gandhi Jayanti
-    - "2024-11-01"  # Diwali - Laxmi Pujan (regular session closed)
-    - "2024-11-15"  # Gurunanak Jayanti
-    - "2024-12-25"  # Christmas
+    - "2024-01-22"
+    - "2024-01-26"
+    - "2024-03-08"
+    - "2024-03-25"
+    - "2024-03-29"
+    - "2024-04-11"
+    - "2024-04-17"
+    - "2024-05-01"
+    - "2024-05-20"
+    - "2024-06-17"
+    - "2024-07-17"
+    - "2024-08-15"
+    - "2024-10-02"
+    - "2024-11-01"
+    - "2024-11-15"
+    - "2024-11-20"
+    - "2024-12-25"
     # --- 2025 ---
-    - "2025-02-26"  # Mahashivratri
-    - "2025-03-14"  # Holi
-    - "2025-03-31"  # Id-ul-Fitr (Ramzan Id)
-    - "2025-04-10"  # Mahavir Jayanti
-    - "2025-04-14"  # Dr. Ambedkar Jayanti
-    - "2025-04-18"  # Good Friday
-    - "2025-05-01"  # Maharashtra Day
-    - "2025-08-15"  # Independence Day
-    - "2025-08-27"  # Ganesh Chaturthi
-    - "2025-10-02"  # Gandhi Jayanti / Dussehra
-    - "2025-10-21"  # Diwali - Laxmi Pujan (regular session closed)
-    - "2025-10-22"  # Diwali - Balipratipada
-    - "2025-11-05"  # Gurunanak Jayanti
-    - "2025-12-25"  # Christmas
+    - "2025-02-26"
+    - "2025-03-14"
+    - "2025-03-31"
+    - "2025-04-10"
+    - "2025-04-14"
+    - "2025-04-18"
+    - "2025-05-01"
+    - "2025-08-15"
+    - "2025-08-27"
+    - "2025-10-02"
+    - "2025-10-21"
+    - "2025-10-22"
+    - "2025-11-05"
+    - "2025-12-25"
+    # --- 2026 ---
+    - "2026-01-15"
+    - "2026-01-26"
+    - "2026-03-03"
+    - "2026-03-26"
+    - "2026-03-31"
+    - "2026-04-03"
+    - "2026-04-14"
+    - "2026-05-01"
+    - "2026-05-28"
+    - "2026-06-26"
+    - "2026-09-14"
+    - "2026-10-02"
+    - "2026-10-20"
+    - "2026-11-10"
+    - "2026-11-24"
+    - "2026-12-25"
