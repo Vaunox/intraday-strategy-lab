@@ -67,6 +67,30 @@ def exchange_request_token(session: KiteSession, request_token: str, api_secret:
     return access_token
 
 
+def build_login_url(api_key: str) -> str:
+    """Return the Kite login URL for ``api_key`` (the operator opens this to log in).
+
+    The ``kiteconnect`` SDK is imported lazily so this module never requires it at
+    import time.
+    """
+    from kiteconnect import KiteConnect
+
+    client = KiteConnect(api_key=api_key)
+    return str(client.login_url())
+
+
+def mint_access_token(api_key: str, api_secret: str, request_token: str) -> str:
+    """Mint the day's access token from a one-time ``request_token`` (live SDK).
+
+    Thin operator-facing wrapper over :func:`exchange_request_token`; the SDK is
+    imported lazily. Never logs the token.
+    """
+    from kiteconnect import KiteConnect
+
+    session: KiteSession = KiteConnect(api_key=api_key)
+    return exchange_request_token(session, request_token, api_secret)
+
+
 class KiteTokenStore:
     """Persists the daily Kite access token to a git-ignored JSON file."""
 

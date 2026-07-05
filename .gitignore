@@ -2,6 +2,8 @@
 secrets/
 .env
 .env.*
+# ...but DO track the placeholder template (it contains no real secrets):
+!.env.example
 # Kite Connect daily access-token / request-token artifacts, wherever they land
 *.token
 *access_token*

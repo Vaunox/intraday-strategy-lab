@@ -16,10 +16,14 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from lab.core.interfaces import BrokerAdapter
+from lab.core.secrets import EnvSecretsProvider
 from lab.core.types import BarInterval, Candle
 from lab.data.brokers.kite_adapter import (
     KiteAdapter,
+    MissingAccessTokenError,
     UnknownSymbolError,
+    _parse_instrument_tokens,
+    _resolve_access_token,
     candle_from_kite_row,
 )
 from lab.data.brokers.kite_auth import KiteTokenStore, StoredToken, exchange_request_token
@@ -147,3 +151,32 @@ def test_token_store_round_trip(tmp_path: Path) -> None:
     assert loaded.access_token == "tok-abc"
     assert loaded.is_valid_for(date(2024, 7, 15))
     assert not loaded.is_valid_for(date(2024, 7, 16))
+
+
+def test_resolve_access_token_prefers_token_store(tmp_path: Path) -> None:
+    store = KiteTokenStore(tmp_path / "kite_access_token.json")
+    store.save(StoredToken(access_token="from-store", issued_on=date(2024, 7, 15)))
+    secrets = EnvSecretsProvider({"KITE_ACCESS_TOKEN": "from-env"})
+    assert _resolve_access_token(secrets, store) == "from-store"
+
+
+def test_resolve_access_token_falls_back_to_secret(tmp_path: Path) -> None:
+    empty_store = KiteTokenStore(tmp_path / "missing.json")  # nothing saved
+    secrets = EnvSecretsProvider({"KITE_ACCESS_TOKEN": "from-env"})
+    assert _resolve_access_token(secrets, empty_store) == "from-env"
+    assert _resolve_access_token(secrets, None) == "from-env"
+
+
+def test_resolve_access_token_raises_when_absent() -> None:
+    with pytest.raises(MissingAccessTokenError, match="kite_login"):
+        _resolve_access_token(EnvSecretsProvider({}), None)
+
+
+def test_parse_instrument_tokens_filters_equity_and_universe() -> None:
+    rows = [
+        {"tradingsymbol": "RELIANCE", "instrument_token": 738561, "instrument_type": "EQ"},
+        {"tradingsymbol": "TCS", "instrument_token": 2953217, "instrument_type": "EQ"},
+        {"tradingsymbol": "NIFTY24DECFUT", "instrument_token": 999, "instrument_type": "FUT"},
+    ]
+    assert _parse_instrument_tokens(rows) == {"RELIANCE": 738561, "TCS": 2953217}
+    assert _parse_instrument_tokens(rows, universe=["RELIANCE"]) == {"RELIANCE": 738561}
