@@ -24,13 +24,24 @@
 | Field | Value |
 |---|---|
 | Source | Zerodha Kite Connect historical candle API (OHLCV[+OI]) |
-| Universe | ‹define — e.g., liquid Nifty-100 constituents, survivorship-correct› |
-| Date range | ‹YYYY-MM-DD → YYYY-MM-DD› |
-| Intervals | ‹e.g., 1/3/5/15-min + daily› |
-| Hygiene applied | corp-action adjustment, survivorship (point-in-time constituents), bad-tick filter, gap detection, liquidity screen, ESM/T2T exclusion |
+| Universe | NIFTY 50 — 49 names backfilled. Snapshot & provenance in `config/universe/nifty50.yaml` (`as_of` 2025-09-30). **Survivor-only, NOT point-in-time** — see §2.1. |
+| Date range | 2015-02-02 → 2026-07-03 (Kite's 5-min history begins Feb 2015) |
+| Intervals | 5-minute (primary decision frequency; ≈ 8.96M candles) |
+| Hygiene applied | corp-action adjustment (adjusted layer), bad-tick filter (zero/blank-price bars dropped at ingest, logged), gap detection, liquidity screen, ESM/T2T exclusion. **Survivorship NOT corrected** (see §2.1). |
 | Data version | ‹hash / tag› |
 
 **Data constraint:** Kite historical candles only. No live depth, no alternative feeds. Microstructure/order-book strategies (order-flow imbalance, depth) are out of scope. Every strategy in the slate is derivable from OHLCV(+volume) alone — see §4 reference table.
+
+### 2.1 — Known limitation: survivor-only universe (bounded, documented)
+
+The backfill uses **today's** index members over **past** data, so it carries **survivorship bias**. Scope and why it is bounded (not a validity gate):
+
+- **Forward P&L is unaffected.** We trade the then-current index going forward (paper and live), so survivorship cannot touch forward returns — it biases only the *historical backtest*.
+- **Direction is upward for long/rank/cross-sectional studies** (survivors outperformed), so a survivor-only backtest is an **upper bound** for those. It is **not guaranteed positive for intraday cross-sectional** signals.
+- **Bounded for NIFTY 50 intraday MIS.** Index exits are **demotions, not deaths** — LTIM, IndusInd, Hero MotoCorp, BPCL, Britannia all still trade on NSE; only genuine corporate-action exits (HDFC Ltd merger, pre-demerger Tata Motors) are truly unrecoverable. Intraday square-off (MIS) neutralizes the hold-through-decline channel that drives most equity survivorship bias.
+- **As-built delta.** The backfilled 49 wrongly include BPCL, BRITANNIA, HEROMOTOCO, INDUSINDBK and omit ETERNAL, INDIGO, JIOFIN, MAXHEALTH, TMPV vs the current set (they were pulled from a stale ~2024 list); full delta in the artifact's `backfill:` block.
+- **Handling.** Study output carries a **provisional / upper-bound stamp only when a strategy clears its gate by a narrow margin** — the sole place a small bias could flip a verdict; wide-margin passes and KILLs are not stamped.
+- **Roadmap (not built now):** point-in-time membership from NSE reconstitution notices (a few changes/year) plus pulling demoted names from Kite would close most of the residual, since demoted names still trade.
 
 ## 3. Methodology
 
