@@ -1,0 +1,248 @@
+"""Point-in-time technical indicators (Phase 1, P1.5).
+
+Every function is a *pure, causal* map from an :class:`OHLCV` to an aligned array:
+the value at bar ``i`` uses only bars ``0..i``. Standard indicators come from
+TA-Lib (avoiding hand-rolled bugs); VWAP, pivots, opening range, gaps, Donchian
+channels, relative volume, and realized volatility are hand-rolled because TA-Lib
+lacks them — each with tests and each strictly causal, so the dual-path skew test
+(``harness``) passes.
+
+Warmup regions are ``NaN``. Session-aware features (VWAP, pivots, opening range,
+gap) reset on the IST trading date carried by the bar timestamps.
+"""
+
+from __future__ import annotations
+
+from datetime import date, datetime, timedelta
+
+import numpy as np
+import talib
+from numpy.lib.stride_tricks import sliding_window_view
+
+from lab.data.features.ohlcv import OHLCV, FloatArray
+
+
+def _empty(n: int) -> FloatArray:
+    return np.full(n, np.nan, dtype=np.float64)
+
+
+def _rolling(values: FloatArray, period: int, use_max: bool) -> FloatArray:
+    """Causal rolling max/min: out[i] over values[i-period+1 .. i], NaN in warmup."""
+    out = _empty(len(values))
+    if len(values) >= period:
+        windows = sliding_window_view(values, period)
+        reduced = windows.max(axis=1) if use_max else windows.min(axis=1)
+        out[period - 1 :] = reduced
+    return out
+
+
+# --- TA-Lib standard indicators --------------------------------------------- #
+def sma(data: OHLCV, period: int) -> FloatArray:
+    """Simple moving average of close."""
+    result: FloatArray = talib.SMA(data.close, timeperiod=period)
+    return result
+
+
+def ema(data: OHLCV, period: int) -> FloatArray:
+    """Exponential moving average of close."""
+    result: FloatArray = talib.EMA(data.close, timeperiod=period)
+    return result
+
+
+def kama(data: OHLCV, period: int) -> FloatArray:
+    """Kaufman adaptive moving average of close (noise-adaptive)."""
+    result: FloatArray = talib.KAMA(data.close, timeperiod=period)
+    return result
+
+
+def rsi(data: OHLCV, period: int) -> FloatArray:
+    """Relative strength index of close."""
+    result: FloatArray = talib.RSI(data.close, timeperiod=period)
+    return result
+
+
+def adx(data: OHLCV, period: int) -> FloatArray:
+    """Average directional index (trend strength)."""
+    result: FloatArray = talib.ADX(data.high, data.low, data.close, timeperiod=period)
+    return result
+
+
+def atr(data: OHLCV, period: int) -> FloatArray:
+    """Average true range (volatility)."""
+    result: FloatArray = talib.ATR(data.high, data.low, data.close, timeperiod=period)
+    return result
+
+
+def macd(
+    data: OHLCV, fast: int, slow: int, signal: int
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """MACD line, signal line, and histogram of close."""
+    macd_line, signal_line, hist = talib.MACD(
+        data.close, fastperiod=fast, slowperiod=slow, signalperiod=signal
+    )
+    return macd_line, signal_line, hist
+
+
+def bollinger(
+    data: OHLCV, period: int, num_std: float
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Bollinger upper, middle, and lower bands of close."""
+    upper, middle, lower = talib.BBANDS(
+        data.close, timeperiod=period, nbdevup=num_std, nbdevdn=num_std
+    )
+    return upper, middle, lower
+
+
+def percent_b(data: OHLCV, period: int, num_std: float) -> FloatArray:
+    """Bollinger %B: position of close within the bands."""
+    upper, _middle, lower = bollinger(data, period, num_std)
+    width = upper - lower
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out: FloatArray = np.where(width > 0, (data.close - lower) / width, np.nan)
+    return out
+
+
+# --- hand-rolled channels / volume / volatility ----------------------------- #
+def donchian(data: OHLCV, period: int) -> tuple[FloatArray, FloatArray]:
+    """Donchian channel: rolling N-bar high and low."""
+    return _rolling(data.high, period, use_max=True), _rolling(data.low, period, use_max=False)
+
+
+def relative_volume(data: OHLCV, period: int) -> FloatArray:
+    """Volume divided by the mean of the prior ``period`` volumes (excludes current)."""
+    out = _empty(len(data))
+    volume = data.volume
+    if len(volume) > period:
+        windows = sliding_window_view(volume[:-1], period)  # prior-period windows
+        means = windows.mean(axis=1)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            out[period:] = np.where(means > 0, volume[period:] / means, np.nan)
+    return out
+
+
+def realized_volatility(data: OHLCV, period: int) -> FloatArray:
+    """Rolling standard deviation of log returns over ``period`` bars."""
+    out = _empty(len(data))
+    close = data.close
+    if len(close) > period:
+        log_ret = np.diff(np.log(close))
+        windows = sliding_window_view(log_ret, period)
+        out[period:] = windows.std(axis=1, ddof=0)
+    return out
+
+
+# --- session-aware features (reset per IST trading date) -------------------- #
+def vwap(data: OHLCV) -> FloatArray:
+    """Intraday cumulative VWAP of the typical price, reset each trading day."""
+    out = _empty(len(data))
+    typical = (data.high + data.low + data.close) / 3.0
+    cum_pv = 0.0
+    cum_v = 0.0
+    current_date = None
+    for i, ts in enumerate(data.timestamps):
+        day = ts.date()
+        if day != current_date:
+            cum_pv = 0.0
+            cum_v = 0.0
+            current_date = day
+        cum_pv += typical[i] * data.volume[i]
+        cum_v += data.volume[i]
+        if cum_v > 0:
+            out[i] = cum_pv / cum_v
+    return out
+
+
+def vwap_deviation(data: OHLCV) -> FloatArray:
+    """Fractional deviation of close from intraday VWAP."""
+    reference = vwap(data)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out: FloatArray = np.where(reference > 0, data.close / reference - 1.0, np.nan)
+    return out
+
+
+def _daily_hlc(data: OHLCV) -> dict[date, tuple[float, float, float]]:
+    """Per-date (high, low, last-close) for the completed prior-day pivot inputs."""
+    result: dict[date, tuple[float, float, float]] = {}
+    for i, ts in enumerate(data.timestamps):
+        day = ts.date()
+        high, low, close = float(data.high[i]), float(data.low[i]), float(data.close[i])
+        if day not in result:
+            result[day] = (high, low, close)
+        else:
+            prev_high, prev_low, _ = result[day]
+            result[day] = (max(prev_high, high), min(prev_low, low), close)
+    return result
+
+
+def pivot(data: OHLCV) -> FloatArray:
+    """Classic daily pivot from the PRIOR trading day's high/low/close.
+
+    Constant within a day and known at the open (prior day is complete), so it is
+    strictly point-in-time. The first day in the series is NaN (no prior day).
+    """
+    out = _empty(len(data))
+    daily = _daily_hlc(data)
+    ordered_dates = list(daily.keys())
+    prior_by_date = {ordered_dates[k]: ordered_dates[k - 1] for k in range(1, len(ordered_dates))}
+    for i, ts in enumerate(data.timestamps):
+        day = ts.date()
+        prior = prior_by_date.get(day)
+        if prior is not None:
+            high, low, close = daily[prior]
+            out[i] = (high + low + close) / 3.0
+    return out
+
+
+def opening_range(data: OHLCV, window_minutes: int) -> tuple[FloatArray, FloatArray]:
+    """Opening-range high/low over the first ``window_minutes`` of each session.
+
+    While the window is forming it is the running high/low since the open; once
+    the window closes it is fixed. Strictly causal.
+    """
+    or_high = _empty(len(data))
+    or_low = _empty(len(data))
+    session_open: dict[date, datetime] = {}
+    for ts in data.timestamps:
+        session_open.setdefault(ts.date(), ts)
+    window = timedelta(minutes=window_minutes)
+    run_high = -np.inf
+    run_low = np.inf
+    current_date = None
+    for i, ts in enumerate(data.timestamps):
+        day = ts.date()
+        if day != current_date:
+            current_date = day
+            run_high = -np.inf
+            run_low = np.inf
+        if ts < session_open[day] + window:
+            run_high = max(run_high, float(data.high[i]))
+            run_low = min(run_low, float(data.low[i]))
+        or_high[i] = run_high
+        or_low[i] = run_low
+    return or_high, or_low
+
+
+def gap(data: OHLCV) -> FloatArray:
+    """Overnight gap: (day's first open - prior day's last close) / prior close.
+
+    Constant within a day, known at the open. First day is NaN.
+    """
+    out = _empty(len(data))
+    first_open: dict[date, float] = {}
+    last_close: dict[date, float] = {}
+    for i, ts in enumerate(data.timestamps):
+        day = ts.date()
+        if day not in first_open:
+            first_open[day] = float(data.open[i])
+        last_close[day] = float(data.close[i])
+    ordered_dates = list(first_open.keys())
+    gap_by_date: dict[date, float] = {}
+    for k in range(1, len(ordered_dates)):
+        prior_close = last_close[ordered_dates[k - 1]]
+        if prior_close > 0:
+            gap_by_date[ordered_dates[k]] = first_open[ordered_dates[k]] / prior_close - 1.0
+    for i, ts in enumerate(data.timestamps):
+        value = gap_by_date.get(ts.date())
+        if value is not None:
+            out[i] = value
+    return out
