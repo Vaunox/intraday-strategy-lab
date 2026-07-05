@@ -36,12 +36,12 @@
 
 - **Signal form:** deterministic rule-based `StrategySpec`s (no ML as the signal generator; meta-labeling is the only optional ML, and only on strategies that already show a gross edge — Phase 4.5).
 - **Execution model:** next-bar-open fills; intraday square-off; full Indian cost model (brokerage / STT sell-side / exchange txn / SEBI turnover fee / GST / stamp buy-side ≈ 0.12–0.20% round trip; no DP charge — MIS intraday, not delivery) + size/liquidity-aware slippage (0.05–0.20%). All statutory rates read from `config/costs.yaml`.
-- **Validation:** purged k-fold + embargo (**1-trading-day embargo**, ≥ the intraday holding horizon); Combinatorial Purged CV (path-Sharpe distribution); Deflated Sharpe Ratio against the **honest, program-wide cumulative trial count**; PBO via CSCV; walk-forward equity; robustness battery (parameter sensitivity, Monte Carlo shuffle, noise injection, cross-symbol); two-engine reconciliation.
+- **Validation:** purged k-fold + embargo (**1-trading-day embargo**, ≥ the intraday holding horizon); Combinatorial Purged CV (path-Sharpe distribution); Deflated Sharpe Ratio against the **honest, program-wide cumulative EFFECTIVE trial count (correlated variants clustered)**; PBO via CSCV; walk-forward equity; robustness battery (parameter sensitivity, Monte Carlo shuffle, noise injection, cross-symbol); two-engine reconciliation.
 - **Sharpe convention (fixed for all studies):** annualized by √(`sharpe.periods_per_year`); scaled on **in-market periods, not calendar time**; identical across every study so verdicts are comparable.
 - **Pre-registration:** each study's hypothesis, parameters, and kill thresholds were committed to git **before** its first test run (auditable in history).
-- **The seven-point kill-gate** — every threshold a single pre-committed number in `config/killgate.yaml`, never a range, never adjusted to pass: (1) CPCV median path-Sharpe **> 1.0** net of costs; (2) **DSR ≥ 0.95** vs the cumulative trial count; (3) **PBO < 0.20**; (4) **≥ 90% of CPCV paths positive and 10th-percentile path-Sharpe ≥ 0**; (5) **profit factor ≥ 1.3, top-5 wins < 40% of gross profit, expectancy > round-trip cost**; (6) survives the robustness battery (each sub-test with a pinned bar); (7) median path-Sharpe > 0 in **every** pre-defined regime bucket, and net-positive with the single best bucket removed. Fail any one → KILL.
+- **The seven-point kill-gate** — every threshold a single pre-committed number in `config/killgate.yaml`, never a range, never adjusted to pass: (1) CPCV median path-Sharpe **> 1.0** net of costs; (2) **DSR ≥ 0.95** vs the effective trial count (correlated variants clustered); (3) **PBO < 0.20**; (4) **≥ 90% of CPCV paths positive and 10th-percentile path-Sharpe ≥ 0**; (5) **profit factor ≥ 1.3, top-5 wins < 40% of gross profit, expectancy > round-trip cost**; (6) survives the robustness battery (each sub-test with a pinned bar); (7) median path-Sharpe > 0 in **every** pre-defined regime bucket, and net-positive with the single best bucket removed. Fail any one → KILL.
 
-**Cumulative trial count at time of writing:** ‹machine-maintained N — pulled from the trial ledger, never hand-typed›.
+**Cumulative effective trial count at time of writing:** ‹machine-maintained effective-N — clustered from the per-trial return streams in the ledger, never a raw variant count, never hand-typed›.
 
 ---
 
@@ -238,11 +238,11 @@ The slate is fixed before testing. §4.1 defines each strategy and its exact Kit
 
 ## 7. Cross-strategy synthesis
 
-‹Filled at Phase 5. Master results table ranking all 20 studies by DSR-adjusted, cost-inclusive path-Sharpe. Which cleared the seven-point kill-gate (if any). What distinguishes survivors from failures — category, frequency, cost sensitivity, regime dependence. How much the honest cumulative trial count deflated the raw Sharpes.›
+‹Filled at Phase 5. Master results table ranking all 20 studies by DSR-adjusted, cost-inclusive path-Sharpe. Which cleared the seven-point kill-gate (if any). What distinguishes survivors from failures — category, frequency, cost sensitivity, regime dependence. How much the honest cumulative effective trial count (correlated variants clustered) deflated the raw Sharpes.›
 
 ## 8. Conclusion
 
-‹The honest bottom line. Which strategies (if any) hold a real, cost-surviving edge, and which are bias/luck artifacts. If none cleared the gate, state it plainly — a complete and valuable result. Record the total cumulative trial count and its DSR implications. Note next steps only if a survivor exists (productionization is gated on a passing verdict).›
+‹The honest bottom line. Which strategies (if any) hold a real, cost-surviving edge, and which are bias/luck artifacts. If none cleared the gate, state it plainly — a complete and valuable result. Record the total cumulative effective trial count (correlated variants clustered) and its DSR implications. Note next steps only if a survivor exists (productionization is gated on a passing verdict).›
 
 ## 9. Reproducibility appendix
 

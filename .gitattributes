@@ -1,0 +1,13 @@
+# Normalize line endings: LF in the repository, on every OS.
+# Keeps the Linux CI container and the Windows dev machine byte-identical
+# (Part I §2 — OS-portable, reproducible).
+* text=auto eol=lf
+
+# Binary / non-diffable assets (none yet; declared for when data samples land).
+*.parquet binary
+*.png binary
+*.jpg binary
+*.gz binary
+
+# Lockfile is generated — collapse in diffs but keep it versioned.
+uv.lock linguist-generated=true

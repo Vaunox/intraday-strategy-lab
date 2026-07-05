@@ -1,0 +1,6 @@
+# Developer environment overlay: verbose, human-readable logs.
+# Overrides config/default.yaml; itself overridable by LAB__ environment vars.
+
+logging:
+  level: DEBUG
+  renderer: console

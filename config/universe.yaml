@@ -1,0 +1,9 @@
+# Trading universe — SCAFFOLD (Part I §3 structure).
+#
+# The authoritative, survivorship-correct, point-in-time universe of liquid NSE
+# cash-equity symbols is defined in Phase 1 (P1.4 hygiene: liquidity screen,
+# point-in-time constituents including delisted/renamed names, ESM/T2T
+# exclusion). It is intentionally left empty here so no un-vetted symbol list is
+# implied before that work exists. This file is not consumed by any Phase 0 code.
+
+symbols: []

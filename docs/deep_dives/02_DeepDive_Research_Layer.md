@@ -18,20 +18,20 @@ From a rule-based `StrategySpec` to an honest, cost-inclusive, overfitting-resis
 Annualized by √(`sharpe.periods_per_year`); scaled on **in-market periods, not calendar**; identical across every study. A bare "Sharpe" is not comparable across intraday strategies — the convention is pinned so P3.1 and P3.13 are.
 
 ## Validation — two questions, two tools
-- **Is the edge real?** Purged k-fold + embargo (**1-trading-day embargo** ≥ the intraday holding horizon); CPCV (N groups, k test → C(N,k) splits → φ = C(N,k)·k/N paths; judge the *distribution* of path-Sharpes); Deflated Sharpe Ratio (corrects trial count, skew, kurtosis, length; fed by the program-wide cumulative ledger); PBO via CSCV.
+- **Is the edge real?** Purged k-fold + embargo (**1-trading-day embargo** ≥ the intraday holding horizon); CPCV (N groups, k test → C(N,k) splits → φ = C(N,k)·k/N paths; judge the *distribution* of path-Sharpes); Deflated Sharpe Ratio (corrects for the **effective number of independent trials**, skew, kurtosis, length; fed by the program-wide ledger of per-trial return streams, correlated variants clustered); PBO via CSCV.
 - **What would live feel like?** Walk-forward with full costs + slippage + next-bar-open fills.
 
 ## Meta-labeling (the only ML; optional, bounded, gated — Phase 4.5)
 Rule decides the **side**; a small calibrated model (LightGBM/logistic) decides **bet/no-bet + size** from context only (ATR, time-of-day, volume, regime — never lookahead), tuned under purged CV, probabilities calibrated (isotonic/Platt), size fractional-Kelly-capped. Runs **only** on a strategy already showing a *gross* edge worth filtering; every variant charged to the trial ledger. A meta-model that turns a losing rule into a winner is overfitting, not alpha.
 
-## Honest trial ledger
-Program-wide, machine-maintained cumulative count of every variant ever evaluated (including discarded), persisted across all sessions and phases, feeding the DSR automatically. No caller passes a literal N (CI-enforced).
+## Honest trial ledger (effective, not raw)
+Program-wide, machine-maintained store of **every variant's realized return stream** (including discarded), persisted across all sessions and phases. The DSR is deflated by the **effective number of independent trials, not the raw variant count**: cluster the trials by P&L correlation; each cluster contributes an effective count reflecting its internal correlation — a tight cluster of near-duplicate variants (a one-at-a-time parameter sweep) contributes far less than its member count, while genuinely distinct strategies each contribute ~their own weight. This is the same cluster-adjusted effective-trial-count pattern as López de Prado's covariance/clustering treatment. Feeding a raw integer *N* would over-deflate the whole program and kill strategies that held a real edge. The effective-N feeds the DSR automatically; no caller passes a literal N (CI-enforced).
 
 ## THE KILL-GATE — every threshold a single pre-committed number (`config/killgate.yaml`)
 A range invites picking the lenient end when the strict end fails — that is the overfitting Inviolable Rule 1 forbids. So each criterion is one pinned value, fixed before running:
 
 1. **CPCV median path-Sharpe > 1.0**, net of costs, on the fixed Sharpe convention.
-2. **DSR ≥ 0.95** vs the live cumulative trial count.
+2. **DSR ≥ 0.95** vs the live **effective** trial count (correlated variants clustered; never a raw count).
 3. **PBO < 0.20** via CSCV.
 4. **≥ 90% of CPCV paths positive** and **10th-percentile path-Sharpe ≥ 0** (both).
 5. **Profit factor ≥ 1.3**, **top-5 winning trades < 40% of gross profit**, **expectancy > round-trip cost** (all three).
@@ -44,7 +44,7 @@ Fail any one → KILL, recorded honestly in the paper. Changing any threshold in
 If a strategy's median gross move per trade is smaller than modeled round-trip cost + slippage, it is cost-dead before validation — record that as the verdict, log the trial, and don't burn the full battery on it. (Scalping is the expected first casualty.)
 
 ## To expand later (as tasks demand)
-- Exact DSR and PSR formulas and the benchmark-Sharpe derivation from trial count.
+- Exact DSR and PSR formulas, the benchmark-Sharpe derivation, and the trial-clustering that turns per-trial return streams into the effective trial count.
 - CSCV construction for PBO and the logit-of-rank test.
 - The two-engine reconciliation tolerance and the hand-computed cost/fill fixtures.
 - Robustness sub-test parameterization and seeds.
