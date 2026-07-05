@@ -70,7 +70,7 @@ intraday-strategy-lab/
 │   ├── research/
 │   │   ├── validation/           # purged CV, embargo, CPCV, DSR, PBO, cost backtester, robustness
 │   │   ├── strategies/           # StrategySpec protocol + one module per strategy study
-│   │   ├── trials/               # cumulative honest trial-count ledger
+│   │   ├── trials/               # honest trial ledger: per-trial return streams → effective-N
 │   │   └── reports/              # per-study report + tearsheet + kill-gate emitter + paper updater
 │   └── ...
 ├── tests/
@@ -109,10 +109,10 @@ Structured logging (not bare prints), configured once in `core/`. Appropriate le
 ## Project-Specific Inviolable Rules
 These override convenience and "just make it work."
 
-1. **The kill-gate is sacred.** No strategy is called a real edge without passing **all seven** kill-gate criteria (Part III). No tweaking-until-it-passes — that is overfitting, and it inflates the trial count the Deflated Sharpe will punish. **Most strategies should die at the gate. That is success, not failure** — an honest negative is the correct, valuable outcome of a study.
+1. **The kill-gate is sacred.** No strategy is called a real edge without passing **all seven** kill-gate criteria (Part III). No tweaking-until-it-passes — that is overfitting, and every variant it spawns is charged to the honest trial ledger the Deflated Sharpe draws on. **Most strategies should die at the gate. That is success, not failure** — an honest negative is the correct, valuable outcome of a study.
 2. **Point-in-time correctness, always.** No feature or signal may use data unavailable at decision time. A decision on bar *t*'s close executes at bar *t+1*'s open — identically in backtest logic everywhere. All normalization uses trailing/expanding windows only. Leakage tests run in CI.
 3. **Costs are always modeled.** No gross-only backtests. The full Indian intraday cost model (brokerage, STT, exchange charges, GST, stamp duty) plus realistic slippage applies to every simulation.
-4. **Honest, cumulative trial counting.** Every strategy variant ever run — including discarded ones — counts toward the cumulative trial budget that deflates the Sharpe (Part III). **What increments the ledger:** each distinct parameter set evaluated by the harness, each meta-model variant, each re-run after any spec change — one row per evaluation, appended, never edited or deleted. **The ledger is program-wide and persists across every session and phase** (it is *not* reset per session or per phase); a study in Phase 4 is deflated by all trials since Phase 3.1. It lives in durable storage (`research/trials/`), is machine-maintained, and is never a hand-typed literal. Testing ~20 strategies is heavy multiple-testing; this cumulative correction is the whole point of doing it honestly.
+4. **Honest, cumulative *effective* trial counting.** Every strategy variant ever run — including discarded ones — is charged to the ledger, and the Deflated Sharpe is deflated by the **effective number of *independent* trials**, obtained by **clustering correlated variants — never the raw backtest count**. **The ledger stores each trial's realized return stream (equivalently, a correlation structure over trials), not merely an integer counter.** Highly correlated variants — a one-at-a-time parameter sweep (MA-20/21/22/23), or any set of near-duplicates — are **not** independent trials and must not be counted as such: clustering collapses such a group to a small effective count, while genuinely distinct strategies each contribute roughly their own weight. Feeding a raw integer *N* to the DSR would over-deflate the entire program and **kill strategies that held a real edge** — that failure mode is forbidden. **What the ledger records:** one appended row per evaluation — each distinct parameter set, each meta-model variant, each re-run after any spec change — carrying that trial's return stream, never edited or deleted. **The ledger is program-wide and persists across every session and phase** (it is *not* reset per session or per phase); a study in Phase 4 is deflated by the effective count over all trials since Phase 3.1. It lives in durable storage (`research/trials/`), is machine-maintained, and the effective-*N* it yields is never a hand-typed literal. Testing ~20 strategies is heavy multiple-testing; this cluster-adjusted correction is the whole point of doing it honestly.
 5. **Kite historical candle data is the only data source.** No paid alternative feeds, no scraped fundamentals, no live depth in the research program (see Part II data policy). If a strategy *requires* data Kite historical does not provide, it is out of scope and is recorded as data-gated, not faked.
 6. **Honesty about outcomes.** "High stable profit" is not a goal and is not promised. Over 90% of retail F&O traders lose money — that is the operating reality. The achievable target is to *discover whether any of these strategies holds a small, real, cost-surviving edge*, and to say so plainly either way. The system must be able to conclude "none of them do."
 7. **Build in dependency order; respect the gates.** The research apparatus (Phases 0–2) is built before any strategy is tested (Phases 3–4). Do not proceed past a failed gate.
@@ -133,7 +133,7 @@ A research apparatus that ingests **Kite historical candle data** for liquid NSE
 - Base rate: SEBI studies find **>90% of retail F&O traders lose money** (≈91% in FY24; ~93% over FY22–FY24). *This program trades **cash-equity intraday**, a different population from F&O — the figure is cited as a humility anchor on retail active trading generally, not a claim about this exact strategy class. Intraday cash loss rates are also high but are not the same statistic; do not conflate the two.*
 - Lookahead/leakage bias inflates backtest Sharpe substantially — several studies show correcting it roughly halving or more the apparent Sharpe of ML strategies. *(If a specific figure is quoted in the paper, cite the exact source; do not carry an unsourced number in an honesty-first document.)*
 - Realistic sustainable net Sharpe is **1.0–2.0**; a backtest Sharpe **>3 is a red flag**, not a trophy.
-- Testing ~20 strategies means multiple-testing is severe: a few will look good by luck. The Deflated Sharpe with an honest cumulative trial count is the defense.
+- Testing ~20 strategies means multiple-testing is severe: a few will look good by luck. The Deflated Sharpe against an honest cumulative **effective** trial count — correlated variants clustered, so a parameter sweep is not mistaken for many independent bets — is the defense.
 
 ## Data policy — Kite historical only
 - **Source:** Zerodha Kite Connect **historical candle API** — OHLCV (+OI where applicable) at 1/3/5/15/60-minute and daily intervals, up to ~10 years, under the paid Connect plan.
@@ -159,7 +159,7 @@ A research apparatus that ingests **Kite historical candle data** for liquid NSE
 | Research store | Parquet on local disk, partitioned by symbol/date | Append-only, versioned, reproducible; no server needed for a historical-only program |
 | Cost model | Full Indian intraday itemized (brokerage/STT/exchange/GST/stamp) + slippage | No gross-only backtests (Inviolable Rule 3) |
 | Validation | Purged CV + embargo, CPCV, Deflated Sharpe, PBO, robustness battery, 7-point kill-gate | The canonical anti-overfitting playbook (López de Prado) |
-| Trial counting | Machine-maintained cumulative ledger across all studies | Honest multiple-testing correction (Inviolable Rule 4) |
+| Trial counting | Machine-maintained ledger of per-trial return streams; DSR deflated by the **effective** (cluster-adjusted) trial count, not the raw variant count | Honest multiple-testing correction (Inviolable Rule 4) |
 | Language/tooling | Python; ruff+black, mypy, pytest, pre-commit, CI | Standard, proven |
 
 ## Environment policy
@@ -210,16 +210,16 @@ Prefer **TA-Lib** for standard indicators (avoid hand-rolled indicator bugs); ha
 - **Intraday square-off** at the configured session end (no overnight carry for MIS strategies).
 
 **Validation (two questions, two tools):**
-- *Is the edge real?* → **purged k-fold + embargo** (**embargo ≥ the max label/holding horizon**; because every position squares off intraday the horizon is ≤ 1 session, so a **1-trading-day embargo** fully removes overlap leakage — pin it, don't leave it implicit); **CPCV** (combinatorial purged CV: N groups, k test → C(N,k) splits → φ = C(N,k)·k/N paths; judge the *distribution* of path-Sharpes — narrow & positive = robust, wild variance = fragile); **Deflated Sharpe Ratio** (corrects for trial count, skew, kurtosis, length — fed by the honest cumulative trial ledger); **PBO via CSCV**; the DSR significance bar (≥ 0.95) is kill-gate criterion 2, subsuming the classic t-stat ~3.0 hurdle.
+- *Is the edge real?* → **purged k-fold + embargo** (**embargo ≥ the max label/holding horizon**; because every position squares off intraday the horizon is ≤ 1 session, so a **1-trading-day embargo** fully removes overlap leakage — pin it, don't leave it implicit); **CPCV** (combinatorial purged CV: N groups, k test → C(N,k) splits → φ = C(N,k)·k/N paths; judge the *distribution* of path-Sharpes — narrow & positive = robust, wild variance = fragile); **Deflated Sharpe Ratio** (corrects for the **effective number of independent trials**, skew, kurtosis, length — fed by the honest trial ledger of per-trial return streams, correlated variants clustered); **PBO via CSCV**; the DSR significance bar (≥ 0.95) is kill-gate criterion 2, subsuming the classic t-stat ~3.0 hurdle.
 - *What would live feel like?* → **walk-forward** with the full cost model + slippage + next-bar-open fills.
 
 **Robustness battery:** parameter sensitivity, Monte Carlo trade shuffle, noise injection, cross-symbol validation, two-engine reconciliation (a vectorized screen vs the event-driven backtester agreeing to tolerance).
 
-**Honest trial ledger:** a machine-maintained cumulative count of every strategy variant ever evaluated (including discarded ones), feeding the DSR automatically. No caller may pass a literal N.
+**Honest trial ledger (effective, not raw):** a machine-maintained, program-wide store of **every strategy variant's realized return stream** (including discarded ones), persisted across all sessions and phases. The DSR is deflated **not by the raw variant count but by the effective number of independent trials**: cluster the trials by P&L correlation, and let each cluster contribute an effective count reflecting its internal correlation — a tight cluster of near-duplicate variants (a one-at-a-time parameter sweep) contributes far less than its member count, while genuinely distinct strategies each contribute ~their own weight. This is the same cluster-adjusted effective-trial-count pattern as López de Prado's covariance/clustering treatment. The effective-N feeds the DSR automatically; no caller may pass a literal N.
 
 **THE KILL-GATE (all seven; every threshold is a single pre-committed number, fixed in `config/` before the first run — never a range, never adjusted to rescue a result).** A threshold expressed as a range is an invitation to pick the lenient end when the strict end fails; that is the exact overfitting Inviolable Rule 1 forbids, so each criterion below pins one value:
 1. **CPCV median path-Sharpe > 1.0**, net of costs, on the **fixed Sharpe convention** below.
-2. **DSR ≥ 0.95** — the Deflated Sharpe probability that the true Sharpe exceeds the multiple-testing-adjusted benchmark, computed against the live cumulative trial count (never a hand-typed N).
+2. **DSR ≥ 0.95** — the Deflated Sharpe probability that the true Sharpe exceeds the multiple-testing-adjusted benchmark, computed against the live **effective** trial count (correlated variants clustered; never a raw count, never a hand-typed N).
 3. **PBO < 0.20** via CSCV. (Single pinned value; 0.20, not "0.2–0.5.")
 4. **Narrow, positive CPCV distribution:** ≥ 90% of reconstructed paths have a positive Sharpe **and** the 10th-percentile path-Sharpe ≥ 0 (no deeply negative path). Both must hold.
 5. **P&L not concentrated:** profit factor ≥ 1.3 **and** the top-5 winning trades contribute < 40% of gross profit **and** per-trade expectancy exceeds the modeled round-trip cost.
@@ -275,12 +275,12 @@ A single ordered path. Phases 0–2 build the research apparatus; Phases 3–4 t
 
 - **P2.1 — Validation core.** Purged k-fold + embargo splitter; event-driven backtester (next-bar-open, intraday square-off); full Indian cost model; size/liquidity-aware slippage. **Done when:** purge/embargo verified to remove overlap; costs/slippage/next-bar fills applied; tested against hand-computed cases.
 - **P2.2 — CPCV + DSR + PBO.** CPCV path reconstruction (φ = C(N,k)·k/N + path-Sharpe distribution), Deflated & Probabilistic Sharpe, PBO via CSCV. **Done when:** correct path count & distribution; DSR/PBO match reference formulas; tested.
-- **P2.3 — Honest trial ledger.** A machine-maintained cumulative trial-count source feeding DSR automatically; the hard-coded-N path removed and forbidden at the call site. **Done when:** DSR pulls N from the live cumulative count; a test asserts no caller passes a literal N.
+- **P2.3 — Honest effective-trial ledger.** A machine-maintained, program-wide ledger that **persists each trial's return stream** (not an integer counter) and yields the **effective number of independent trials by clustering those streams on P&L correlation**, feeding the DSR automatically; the raw-count and hard-coded-N paths are removed and forbidden at the call site. **Done when:** the ledger persists per-trial return streams; the DSR pulls **effective-N by clustering those streams** (never a raw integer count); a test asserts that a cluster of highly correlated variants (e.g. a one-at-a-time parameter sweep) yields an **effective-N well below the raw variant count**; and a test asserts no caller passes a literal N.
 - **P2.4 — `StrategySpec` framework + adapter.** The `StrategySpec` Protocol (event/entry/exit/holding/weight) + an adapter turning a spec's per-period returns into the series the CPCV engine and kill-gate consume. **Done when:** a trivial reference spec runs end-to-end through CPCV + the kill-gate on synthetic data; the validation engine is untouched by strategy code; tested.
 - **P2.5 — Robustness battery + two-engine reconciliation.** Parameter sensitivity, Monte Carlo shuffle, noise injection, cross-symbol; a vectorized engine reconciling with the event-driven one within tolerance. **Done when:** each test runs and reports; two engines reconcile on a sample spec; tested.
-- **P2.6 — Kill-gate emitter + report + paper updater.** `research/reports/` — automated per-study report (CPCV distribution, DSR, PBO, trial count, walk-forward equity, robustness) + tearsheet + the **seven-point kill-gate** as pass/fail, and a helper that appends the study's result section to `docs/RESEARCH_FINDINGS.md`. **Done when:** report generates end-to-end, emits the verdict, and writes the paper section; tested.
+- **P2.6 — Kill-gate emitter + report + paper updater.** `research/reports/` — automated per-study report (CPCV distribution, DSR, PBO, effective trial count, walk-forward equity, robustness) + tearsheet + the **seven-point kill-gate** as pass/fail, and a helper that appends the study's result section to `docs/RESEARCH_FINDINGS.md`. **Done when:** report generates end-to-end, emits the verdict, and writes the paper section; tested.
 
-**GATE 2:** a strategy spec runs through the unchanged seven-point kill-gate on honest, cost-inclusive, point-in-time Kite data; DSR auto-deflates from the live cumulative trial count; results flow into the research paper. Tag `gate-2-harness`. **The research apparatus is now complete — strategy testing (Phase 3) may begin.**
+**GATE 2:** a strategy spec runs through the unchanged seven-point kill-gate on honest, cost-inclusive, point-in-time Kite data; DSR auto-deflates from the live **effective** trial count (correlated variants clustered); results flow into the research paper. Tag `gate-2-harness`. **The research apparatus is now complete — strategy testing (Phase 3) may begin.**
 
 ---
 
@@ -312,7 +312,7 @@ Each study: write a **pre-registration** note (hypothesis, economic rationale, p
 - **Done-when (phase):** all 14 studies have verdicts recorded and paper sections written in the same session.
 - **Reference:** Part III Layer 2; `docs/deep_dives/02`.
 
-**GATE 3:** all 14 single-factor studies have honest verdicts recorded in the paper; the cumulative trial count is intact. Tag `gate-3-single-factor`.
+**GATE 3:** all 14 single-factor studies have honest verdicts recorded in the paper; the cumulative trial ledger (per-trial return streams → effective-N) is intact. Tag `gate-3-single-factor`.
 
 ---
 
@@ -335,7 +335,7 @@ Each combination is a `StrategySpec` composed from the Phase-1 indicators. **Cha
 - **Done-when (per study):** as Phase 3, on cost-inclusive Kite data, paper section written.
 - **Done-when (phase):** all 6 combination studies have verdicts recorded and paper sections written in the same session.
 
-**GATE 4:** all 6 multi-factor studies have honest verdicts recorded; cumulative trial count intact. Tag `gate-4-multi-factor`.
+**GATE 4:** all 6 multi-factor studies have honest verdicts recorded; cumulative trial ledger intact (per-trial return streams → effective-N). Tag `gate-4-multi-factor`.
 
 ---
 
@@ -352,7 +352,7 @@ This is the **only** ML in the program, and it is conditional. Its purpose is to
 
 **Guardrails:** one qualifying strategy at a time; the meta-model may only *reduce* trading (skip instances), never invent new entries; if the net improvement isn't there, the honest result is "meta-labeling did not help," recorded as such.
 
-**GATE 4.5:** every qualifying strategy has a meta-labeled verdict recorded (improved / no-improvement); the cumulative trial count reflects all meta-model variants. Tag `gate-4.5-meta`. *(If no strategy qualified, this phase is skipped and noted as such — that is a valid outcome.)*
+**GATE 4.5:** every qualifying strategy has a meta-labeled verdict recorded (improved / no-improvement); the trial ledger reflects all meta-model variants (each charged toward the effective count). Tag `gate-4.5-meta`. *(If no strategy qualified, this phase is skipped and noted as such — that is a valid outcome.)*
 
 - **Reference:** Part III Layer 2 (meta-labeling); `docs/deep_dives/02`.
 
@@ -362,7 +362,7 @@ This is the **only** ML in the program, and it is conditional. Its purpose is to
 *(one full session)*
 
 - **P5.1 — Cross-strategy synthesis.** Rank all 20 studies (plus any Phase-4.5 meta-labeled variants) by DSR-adjusted, cost-inclusive path-Sharpe; report which (if any) cleared the seven-point kill-gate, and whether meta-labeling changed any verdict; analyze what distinguishes survivors from failures (category, frequency, cost sensitivity, regime dependence). **Done when:** the synthesis section of `docs/RESEARCH_FINDINGS.md` is complete with the master results table.
-- **P5.2 — Conclusion & verdict.** State the honest bottom line: which strategies (if any) hold a real, cost-surviving edge, and which are bias/luck artifacts. If none clear the gate, say so plainly — that is a complete, valuable result (Inviolable Rule 6). Record the total cumulative trial count and the DSR implications.
+- **P5.2 — Conclusion & verdict.** State the honest bottom line: which strategies (if any) hold a real, cost-surviving edge, and which are bias/luck artifacts. If none clear the gate, say so plainly — that is a complete, valuable result (Inviolable Rule 6). Record the total variants evaluated and the resulting cumulative **effective** trial count (correlated variants clustered), and the DSR implications.
 - **P5.3 — Reproducibility appendix.** Data version, universe, date range, config, and the exact command to reproduce every study.
 
 **GATE 5:** the research paper is complete — methodology, per-strategy findings, synthesis, honest conclusion, reproducibility. Tag `gate-5-findings`.
@@ -406,7 +406,7 @@ The complete slate under test. **Status is maintained by the building agent** as
 | P4.5 | Pivot Confluence + MACD Crossover | Pivots · MACD | 15-min | ☐ | — |
 | P4.6 | Donchian Breakout + ATR Stop | Donchian · ATR stop | 15-min | ☐ | — |
 
-**Multiple-testing note:** 20 base strategies × their variants is a large search. The seven-point kill-gate plus a Deflated Sharpe against the honest cumulative trial count is what keeps a lucky winner from being mistaken for a real edge. Expect most — possibly all — to KILL. That is the honest, correct outcome.
+**Multiple-testing note:** 20 base strategies × their variants is a large search. The seven-point kill-gate plus a Deflated Sharpe against the honest cumulative **effective** trial count (correlated variants clustered) is what keeps a lucky winner from being mistaken for a real edge. Expect most — possibly all — to KILL. That is the honest, correct outcome.
 
 ---
 

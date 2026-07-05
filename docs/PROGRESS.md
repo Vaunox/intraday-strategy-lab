@@ -33,11 +33,11 @@
 
 ## Cumulative trial ledger — checkpoint
 
-*The live count lives in `research/trials/` and feeds the DSR automatically. Record a human-readable checkpoint here at each gate so the deflation is auditable at a glance.*
+*The per-trial return streams live in `research/trials/`; the DSR is deflated by the **effective** (cluster-adjusted) trial count automatically, not by a raw variant count. Record a human-readable checkpoint here at each gate so the deflation is auditable at a glance.*
 
-| At gate | Cumulative trials evaluated | Notes |
+| At gate | Variants evaluated → effective-N | Notes |
 |---|---|---|
-| — | 0 | Ledger not yet initialized (created in Phase 2, P2.3) |
+| — | 0 → 0 | Ledger not yet initialized (created in Phase 2, P2.3) |
 
 ---
 

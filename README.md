@@ -8,7 +8,7 @@ The goal is not profit — it is an honest, cost-inclusive, overfitting-resistan
 1. Ingests and cleans Kite historical OHLCV data (corp-action adjusted, survivorship-correct, leakage-tested).
 2. Builds a point-in-time feature & technical-indicator library.
 3. Expresses each strategy as a deterministic rule-based `StrategySpec`.
-4. Runs every strategy through a rigorous validation harness — purged CV, Combinatorial Purged CV, Deflated Sharpe (against an honest cumulative trial count), PBO, full Indian cost model, next-bar-open fills, robustness battery — and a **seven-point kill-gate**.
+4. Runs every strategy through a rigorous validation harness — purged CV, Combinatorial Purged CV, Deflated Sharpe (against an honest cumulative *effective* trial count — correlated variants clustered), PBO, full Indian cost model, next-bar-open fills, robustness battery — and a **seven-point kill-gate**.
 5. Records every verdict in a living research paper: [`docs/RESEARCH_FINDINGS.md`](docs/RESEARCH_FINDINGS.md).
 
 **Research-only. No live trading, no order placement, no capital at risk.**
