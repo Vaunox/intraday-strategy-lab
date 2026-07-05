@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 
 
@@ -141,50 +141,3 @@ class StrategySignal:
         _require_tz_aware(self.asof, "asof")
         if not math.isfinite(self.strength) or not (0.0 <= self.strength <= 1.0):
             raise ValueError(f"strength must be within [0, 1]; got {self.strength!r}")
-
-
-@dataclass(frozen=True, slots=True)
-class TradeResult:
-    """The realized outcome of a single round-trip trade, costs included.
-
-    ``costs`` is the total modeled round-trip cost (brokerage, STT, exchange,
-    GST, stamp) plus slippage in currency terms; ``gross_pnl`` excludes it. There
-    are no gross-only results downstream — ``net_pnl`` is what the harness judges
-    (Inviolable Rule 3).
-    """
-
-    symbol: str
-    side: Side
-    entry_time: datetime
-    exit_time: datetime
-    entry_price: float
-    exit_price: float
-    quantity: int
-    gross_pnl: float
-    costs: float
-
-    def __post_init__(self) -> None:
-        """Validate the trade; raise ``ValueError`` on violation."""
-        _require_nonempty(self.symbol, "symbol")
-        _require_tz_aware(self.entry_time, "entry_time")
-        _require_tz_aware(self.exit_time, "exit_time")
-        if self.exit_time < self.entry_time:
-            raise ValueError("exit_time must not precede entry_time")
-        _require_positive_price(self.entry_price, "entry_price")
-        _require_positive_price(self.exit_price, "exit_price")
-        if self.quantity <= 0:
-            raise ValueError(f"quantity must be positive; got {self.quantity}")
-        if not math.isfinite(self.gross_pnl):
-            raise ValueError(f"gross_pnl must be finite; got {self.gross_pnl!r}")
-        if not math.isfinite(self.costs) or self.costs < 0.0:
-            raise ValueError(f"costs must be finite and non-negative; got {self.costs!r}")
-
-    @property
-    def net_pnl(self) -> float:
-        """Profit/loss after all modeled costs and slippage."""
-        return self.gross_pnl - self.costs
-
-    @property
-    def holding_period(self) -> timedelta:
-        """Wall-clock duration the position was held."""
-        return self.exit_time - self.entry_time

@@ -77,7 +77,25 @@ class FakeKiteSession:
 
 
 def _adapter() -> KiteAdapter:
-    return KiteAdapter(FakeKiteClient(_load_rows()), {"RELIANCE": RELIANCE_TOKEN})
+    # request_interval=0 so tests never sleep on the throttle.
+    return KiteAdapter(
+        FakeKiteClient(_load_rows()), {"RELIANCE": RELIANCE_TOKEN}, request_interval=0.0
+    )
+
+
+class _RateLimitedClient(FakeKiteClient):
+    """A fake client that raises 'Too many requests' the first ``fail_times`` calls."""
+
+    def __init__(self, rows: list[dict[str, Any]], *, fail_times: int) -> None:
+        super().__init__(rows)
+        self._fail_times = fail_times
+        self.attempts = 0
+
+    def historical_data(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        self.attempts += 1
+        if self.attempts <= self._fail_times:
+            raise RuntimeError("Too many requests")  # message matched by _is_rate_limit
+        return super().historical_data(*args, **kwargs)
 
 
 def test_candle_from_kite_row() -> None:
@@ -106,6 +124,87 @@ def test_fetch_respects_time_range() -> None:
     end = datetime(2024, 7, 15, 9, 30, tzinfo=IST)
     candles = adapter.fetch_historical_candles("RELIANCE", BarInterval.MIN_5, start, end)
     assert [c.timestamp.minute for c in candles] == [20, 25, 30]
+
+
+def test_fetch_skips_corrupt_bars_without_crashing() -> None:
+    # Kite can emit a zero-price bar; it must be dropped, not abort the whole fetch.
+    rows = _load_rows()
+    bad = dict(rows[0])
+    bad["date"] = datetime(2024, 7, 15, 9, 40, tzinfo=IST)
+    bad["open"] = 0.0  # corrupt vendor bar
+    adapter = KiteAdapter(
+        FakeKiteClient([*rows, bad]), {"RELIANCE": RELIANCE_TOKEN}, request_interval=0.0
+    )
+    candles = adapter.fetch_historical_candles(
+        "RELIANCE",
+        BarInterval.MIN_5,
+        datetime(2024, 7, 15, 9, 15, tzinfo=IST),
+        datetime(2024, 7, 15, 15, 30, tzinfo=IST),
+    )
+    assert len(candles) == 5  # five good bars kept, the zero-price bar dropped
+    assert all(c.open > 0.0 for c in candles)
+
+
+def test_fetch_retries_on_rate_limit_then_succeeds() -> None:
+    client = _RateLimitedClient(_load_rows(), fail_times=2)
+    waits: list[float] = []
+    adapter = KiteAdapter(
+        client,
+        {"RELIANCE": RELIANCE_TOKEN},
+        request_interval=0.0,
+        backoff_base=0.01,
+        sleep=waits.append,
+    )
+    candles = adapter.fetch_historical_candles(
+        "RELIANCE",
+        BarInterval.MIN_5,
+        datetime(2024, 7, 15, 9, 15, tzinfo=IST),
+        datetime(2024, 7, 15, 15, 30, tzinfo=IST),
+    )
+    assert client.attempts == 3  # two 429s, then success
+    assert len(candles) == 5
+    assert waits == [0.01, 0.02]  # exponential backoff between retries
+
+
+def test_fetch_raises_after_max_retries() -> None:
+    client = _RateLimitedClient(_load_rows(), fail_times=99)
+    adapter = KiteAdapter(
+        client,
+        {"RELIANCE": RELIANCE_TOKEN},
+        request_interval=0.0,
+        max_retries=2,
+        backoff_base=0.0,
+        sleep=lambda _s: None,
+    )
+    with pytest.raises(RuntimeError, match="Too many requests"):
+        adapter.fetch_historical_candles(
+            "RELIANCE",
+            BarInterval.MIN_5,
+            datetime(2024, 7, 15, 9, 15, tzinfo=IST),
+            datetime(2024, 7, 15, 15, 30, tzinfo=IST),
+        )
+    assert client.attempts == 3  # initial try + 2 retries
+
+
+def test_fetch_does_not_retry_non_rate_limit_errors() -> None:
+    class _Boom(FakeKiteClient):
+        def historical_data(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+            self.calls.append((0, "x"))
+            raise ValueError("boom")
+
+    adapter = KiteAdapter(
+        _Boom(_load_rows()),
+        {"RELIANCE": RELIANCE_TOKEN},
+        request_interval=0.0,
+        sleep=lambda _s: None,
+    )
+    with pytest.raises(ValueError, match="boom"):
+        adapter.fetch_historical_candles(
+            "RELIANCE",
+            BarInterval.MIN_5,
+            datetime(2024, 7, 15, 9, 15, tzinfo=IST),
+            datetime(2024, 7, 15, 15, 30, tzinfo=IST),
+        )
 
 
 def test_unknown_symbol_raises() -> None:

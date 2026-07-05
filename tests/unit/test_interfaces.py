@@ -9,7 +9,7 @@ exercise the ``@runtime_checkable`` behavior. Together these are the P0.5
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from lab.core.interfaces import BrokerAdapter, Repository, StrategySpec
@@ -40,6 +40,9 @@ class FakeRepository:
         self, symbol: str, interval: BarInterval, start: datetime, end: datetime
     ) -> Sequence[Candle]:
         return list(self.written)
+
+    def stored_dates(self, symbol: str, interval: BarInterval) -> Sequence[date]:
+        return sorted({c.timestamp.date() for c in self.written})
 
 
 class FakeStrategy:
