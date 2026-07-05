@@ -1,0 +1,70 @@
+# Base configuration for the Intraday Strategy Research Lab.
+#
+# Precedence (lowest to highest):
+#   config/default.yaml  <  config/env/<environment>.yaml  <  LAB__ env vars
+#
+# This is the single source of truth for tunable parameters (Part I §2).
+# NO SECRETS here — API keys/tokens come only from the environment or an
+# untracked .env file, never from versioned config.
+
+environment: dev
+
+logging:
+  # DEBUG | INFO | WARNING | ERROR | CRITICAL
+  level: INFO
+  # console (human-readable) | json (machine-parseable)
+  renderer: console
+  # Extra key substrings to redact, ADDED to the built-in security set
+  # (config can strengthen redaction, never weaken it).
+  redact_keys: []
+
+calendar:
+  # IANA timezone the exchange operates in. Every timestamp and log line is IST.
+  timezone: "Asia/Kolkata"
+
+  session:
+    # NSE cash-equity session boundaries, IST. Always quote times as "HH:MM" —
+    # unquoted values are misread by YAML as base-60 integers.
+    pre_open_start: "09:00"   # pre-open auction begins
+    open: "09:15"             # continuous (regular) session opens
+    close: "15:30"            # continuous session closes
+    square_off: "15:20"       # Zerodha MIS intraday auto-square-off cutoff
+    post_close_start: "15:40" # post-close (closing) session begins
+    post_close_end: "16:00"   # post-close session ends
+
+  # NSE trading holidays on which the regular session is closed (IST), sourced
+  # from official NSE circulars. Weekends are structural and not listed here.
+  # Diwali Muhurat evenings are treated as holidays for the regular daytime
+  # session. Extend this list against the official circular as the backfill
+  # date range is fixed in Phase 1 (P1.4).
+  holidays:
+    # --- 2024 ---
+    - "2024-01-26"  # Republic Day
+    - "2024-03-08"  # Mahashivratri
+    - "2024-03-25"  # Holi
+    - "2024-03-29"  # Good Friday
+    - "2024-04-11"  # Id-ul-Fitr (Ramzan Id)
+    - "2024-04-17"  # Ram Navami
+    - "2024-05-01"  # Maharashtra Day
+    - "2024-06-17"  # Bakri Id
+    - "2024-07-17"  # Muharram
+    - "2024-08-15"  # Independence Day
+    - "2024-10-02"  # Gandhi Jayanti
+    - "2024-11-01"  # Diwali - Laxmi Pujan (regular session closed)
+    - "2024-11-15"  # Gurunanak Jayanti
+    - "2024-12-25"  # Christmas
+    # --- 2025 ---
+    - "2025-02-26"  # Mahashivratri
+    - "2025-03-14"  # Holi
+    - "2025-03-31"  # Id-ul-Fitr (Ramzan Id)
+    - "2025-04-10"  # Mahavir Jayanti
+    - "2025-04-14"  # Dr. Ambedkar Jayanti
+    - "2025-04-18"  # Good Friday
+    - "2025-05-01"  # Maharashtra Day
+    - "2025-08-15"  # Independence Day
+    - "2025-08-27"  # Ganesh Chaturthi
+    - "2025-10-02"  # Gandhi Jayanti / Dussehra
+    - "2025-10-21"  # Diwali - Laxmi Pujan (regular session closed)
+    - "2025-10-22"  # Diwali - Balipratipada
+    - "2025-11-05"  # Gurunanak Jayanti
+    - "2025-12-25"  # Christmas

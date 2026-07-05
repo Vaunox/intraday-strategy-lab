@@ -1,0 +1,7 @@
+# Research environment overlay: machine-parseable logs for durable capture of
+# every study run, config, and result (Part I §8).
+# Overrides config/default.yaml; itself overridable by LAB__ environment vars.
+
+logging:
+  level: INFO
+  renderer: json
