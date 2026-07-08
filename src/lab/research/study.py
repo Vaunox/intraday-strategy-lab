@@ -16,11 +16,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
-import numpy.typing as npt
 
 from lab.core.constants import INDIA_TZ
 from lab.core.interfaces import StrategySpec
@@ -47,8 +46,6 @@ from lab.research.validation.robustness import (
 )
 from lab.research.validation.sharpe import annualized_sharpe, return_stats
 from lab.research.validation.splitter import ONE_TRADING_DAY
-
-FloatArray = npt.NDArray[np.float64]
 
 #: A factory turning a parameter mapping into a concrete spec (studies with tunable
 #: parameters supply one; a parameter-free spec uses the identity default).
@@ -143,33 +140,43 @@ def run_param_configs(
     *,
     notional_per_trade: float = DEFAULT_NOTIONAL,
     timezone: str = INDIA_TZ,
-) -> dict[str, FloatArray]:
-    """Run each parameter config once; return ``label -> net-return stream``."""
-    streams: dict[str, FloatArray] = {}
+) -> dict[str, BacktestResult]:
+    """Run each parameter config once; return ``label -> BacktestResult``.
+
+    The full result (not just the return array) is the single source shared by the
+    ledger (per-trade returns), parameter sensitivity (net Sharpe), and PBO (which
+    needs each trade's entry time to align configs on a common daily grid, B-2).
+    """
+    results: dict[str, BacktestResult] = {}
     for label, params in enumerate_param_configs(base_params, param_steps):
-        result = run_strategy(
+        results[label] = run_strategy(
             spec_factory(params),
             candles,
             cost_model,
             notional_per_trade=notional_per_trade,
             timezone=timezone,
         )
-        streams[label] = result.net_returns
-    return streams
+    return results
 
 
 # --- robustness battery (kill-gate criterion 6) ----------------------------- #
 @dataclass(frozen=True, slots=True)
 class RobustnessReport:
-    """The measured robustness inputs the kill-gate's criterion 6 consumes."""
+    """The measured robustness inputs the kill-gate's criterion 6 consumes.
+
+    ``param_config_sharpes`` (6a) and ``cross_symbol_sharpes`` (6d) are the KEYED
+    evidence the kill-gate's stub guard checks (B-1): the gate derives the worst
+    sweep-Sharpe and the cross-symbol positive fraction from them and rejects an
+    under-shaped stub. Keys are the config label and the held-out symbol.
+    """
 
     param_sensitivity_min_net_sharpe: float
     mc_shuffle_beat_fraction: float
     cross_symbol_positive_fraction: float
     two_engines_reconcile: bool
     noise_survives: bool
-    param_net_sharpes: tuple[float, ...]
-    cross_symbol_net_sharpes: tuple[float, ...]
+    param_config_sharpes: Mapping[str, float]
+    cross_symbol_sharpes: Mapping[str, float]
     noise_net_sharpes: tuple[float, ...]
 
 
@@ -182,7 +189,7 @@ def run_robustness_battery(
     *,
     periods_per_year: float,
     cross_symbol_candles: Mapping[str, Sequence[Candle]] | None = None,
-    config_streams: Mapping[str, FloatArray] | None = None,
+    config_results: Mapping[str, BacktestResult] | None = None,
     notional_per_trade: float = DEFAULT_NOTIONAL,
     noise_seeds: int = 8,
     noise_scale: float = 0.0005,
@@ -196,12 +203,12 @@ def run_robustness_battery(
     and takes the WORST net Sharpe; noise survival re-runs on OHLC-perturbed bars
     and asks the median edge to stay positive; cross-symbol asks a majority of
     held-out symbols to be net-positive; plus the MC sign-flip and the two-engine
-    reconciliation. ``config_streams`` may be passed in to avoid re-running the
+    reconciliation. ``config_results`` may be passed in to avoid re-running the
     parameter variants (the orchestrator shares them with PBO and the ledger).
     """
-    streams = (
-        dict(config_streams)
-        if config_streams is not None
+    results = (
+        dict(config_results)
+        if config_results is not None
         else run_param_configs(
             spec_factory,
             base_params,
@@ -212,10 +219,14 @@ def run_robustness_battery(
             timezone=timezone,
         )
     )
-    param_sharpes = tuple(annualized_sharpe(s, periods_per_year) for s in streams.values())
-    param_min = min((s for s in param_sharpes if np.isfinite(s)), default=float("nan"))
+    param_config_sharpes = {
+        label: annualized_sharpe(r.net_returns, periods_per_year) for label, r in results.items()
+    }
+    param_min = min(
+        (s for s in param_config_sharpes.values() if np.isfinite(s)), default=float("nan")
+    )
 
-    base_net = streams["base"]
+    base_net = results["base"].net_returns
     mc_beat = monte_carlo_sign_flip(base_net, n_shuffles=mc_shuffles, seed=mc_seed)
 
     # Two-engine reconciliation on the base config's identical target series.
@@ -246,9 +257,10 @@ def run_robustness_battery(
     finite_noise = [s for s in noise_sharpes if np.isfinite(s)]
     noise_survives = bool(finite_noise) and float(np.median(finite_noise)) > 0.0
 
-    # Cross-symbol: net-positive on a majority of held-out symbols.
-    cross_sharpes = tuple(
-        annualized_sharpe(
+    # Cross-symbol: net-positive on a majority of held-out symbols (keyed by symbol
+    # so the kill-gate can verify distinct held-out identities, not just a count).
+    cross_symbol_sharpes = {
+        symbol: annualized_sharpe(
             run_strategy(
                 base_spec,
                 symbol_candles,
@@ -258,9 +270,13 @@ def run_robustness_battery(
             ).net_returns,
             periods_per_year,
         )
-        for symbol_candles in (cross_symbol_candles or {}).values()
+        for symbol, symbol_candles in (cross_symbol_candles or {}).items()
+    }
+    cross_fraction = (
+        fraction_positive(tuple(cross_symbol_sharpes.values()))
+        if cross_symbol_sharpes
+        else float("nan")
     )
-    cross_fraction = fraction_positive(cross_sharpes) if cross_sharpes else float("nan")
 
     return RobustnessReport(
         param_sensitivity_min_net_sharpe=param_min,
@@ -268,21 +284,64 @@ def run_robustness_battery(
         cross_symbol_positive_fraction=cross_fraction,
         two_engines_reconcile=reconcile,
         noise_survives=noise_survives,
-        param_net_sharpes=param_sharpes,
-        cross_symbol_net_sharpes=cross_sharpes,
+        param_config_sharpes=param_config_sharpes,
+        cross_symbol_sharpes=cross_symbol_sharpes,
         noise_net_sharpes=noise_sharpes,
     )
 
 
 # --- regime stability (kill-gate criterion 7) ------------------------------- #
-def _time_of_day_bucket(trade: Trade, timezone: str) -> str:
-    """Fixed, pre-defined session buckets (morning / midday / afternoon, IST)."""
-    hour = trade.entry_time.astimezone(ZoneInfo(timezone)).hour
-    if hour < 11:
-        return "morning"
-    if hour < 13:
-        return "midday"
-    return "afternoon"
+def _year_bucket(trade: Trade, timezone: str) -> str:
+    """Self-contained fallback bucket (calendar year of entry).
+
+    Used only when :func:`regime_bucket_stats` is called without a labeler; the
+    orchestrator (:func:`run_study`) supplies the full year x vol/trend labeler
+    from :func:`build_regime_labeler` by default (B-4).
+    """
+    return str(trade.entry_time.astimezone(ZoneInfo(timezone)).year)
+
+
+def build_regime_labeler(
+    candles: Sequence[Candle], *, window: int = 20, timezone: str = INDIA_TZ
+) -> Callable[[Trade], str]:
+    """Build criterion 7's default labeler: ``year | vol-regime | trend-regime`` (B-4).
+
+    Blueprint criterion 7 partitions by year AND by volatility/trend regime (not
+    time-of-day). Each bar is tagged from CAUSAL context — trailing realized vol
+    over ``window`` bars and the sign of the trailing ``window``-bar return — with
+    the high/low vol split at the sample median of that trailing vol (an
+    analysis-time partition of realized results, fixed before grading, never a
+    signal input). A trade inherits its entry bar's regime; an unmatched entry
+    falls back to the year alone.
+    """
+    tz = ZoneInfo(timezone)
+    timestamps = [c.timestamp for c in candles]
+    close = np.array([c.close for c in candles], dtype=np.float64)
+    log_ret = np.diff(np.log(close), prepend=np.log(close[:1])) if close.size else close
+    trailing_vol = np.full(close.size, np.nan, dtype=np.float64)
+    for k in range(close.size):
+        lo = max(0, k - window + 1)
+        if k - lo >= 1:
+            trailing_vol[k] = float(np.std(log_ret[lo : k + 1]))
+    median_vol = (
+        float(np.nanmedian(trailing_vol))
+        if bool(np.any(np.isfinite(trailing_vol)))
+        else float("nan")
+    )
+
+    regime_by_ts: dict[datetime, str] = {}
+    for k, ts in enumerate(timestamps):
+        year = ts.astimezone(tz).year
+        vol = trailing_vol[k]
+        high_vol = bool(np.isfinite(vol) and np.isfinite(median_vol) and vol >= median_vol)
+        base = k - window
+        up = base >= 0 and close[k] >= close[base]
+        regime_by_ts[ts] = f"{year}|{'hivol' if high_vol else 'lovol'}|{'up' if up else 'down'}"
+
+    def label(trade: Trade) -> str:
+        return regime_by_ts.get(trade.entry_time, f"{trade.entry_time.astimezone(tz).year}|unknown")
+
+    return label
 
 
 def regime_bucket_stats(
@@ -291,24 +350,27 @@ def regime_bucket_stats(
     *,
     labeler: Callable[[Trade], str] | None = None,
     timezone: str = INDIA_TZ,
-) -> tuple[tuple[float, ...], bool]:
-    """Per-bucket annualized net Sharpe, and whether the edge survives dropping the best bucket.
+) -> tuple[dict[str, float], bool]:
+    """Per-bucket annualized net Sharpe (keyed by bucket), and drop-the-best survival.
 
-    Buckets are fixed before the run (default: session thirds). Returns the Sharpe
-    of every occupied bucket (a thin bucket scores NaN, which fails the gate — you
-    cannot certify a regime you barely traded) and ``positive_without_best``.
+    Returns ``{bucket_label: net Sharpe}`` for every occupied bucket (a thin bucket
+    scores NaN, which fails the gate — you cannot certify a regime you barely
+    traded) and ``positive_without_best``. The keyed shape is criterion 7's
+    evidence: the kill-gate's stub guard rejects a partition with too few distinct
+    buckets (B-1). ``labeler`` defaults to the calendar year; the orchestrator
+    passes the full year x vol/trend labeler (:func:`build_regime_labeler`).
     """
-    label_of = labeler or (lambda t: _time_of_day_bucket(t, timezone))
+    label_of = labeler or (lambda t: _year_bucket(t, timezone))
     buckets: dict[str, list[Trade]] = {}
     for trade in trades:
         buckets.setdefault(label_of(trade), []).append(trade)
     if not buckets:
-        return (), False
+        return {}, False
 
-    medians = tuple(
-        annualized_sharpe([t.net_return for t in bucket_trades], periods_per_year)
-        for bucket_trades in buckets.values()
-    )
+    bucket_sharpes = {
+        label: annualized_sharpe([t.net_return for t in bucket_trades], periods_per_year)
+        for label, bucket_trades in buckets.items()
+    }
     best_label = max(buckets, key=lambda k: sum(t.net_return for t in buckets[k]))
     without_best = [
         t.net_return for label, ts in buckets.items() if label != best_label for t in ts
@@ -316,7 +378,7 @@ def regime_bucket_stats(
     positive_without_best = (
         len(without_best) >= 2 and annualized_sharpe(without_best, periods_per_year) > 0.0
     )
-    return medians, positive_without_best
+    return bucket_sharpes, positive_without_best
 
 
 # --- the orchestrator ------------------------------------------------------- #
@@ -378,8 +440,8 @@ def run_study(
         embargo=cpcv_embargo,
     )
 
-    # Parameter-variant streams: shared by PBO, the ledger, and param sensitivity.
-    config_streams = run_param_configs(
+    # Parameter-variant runs: shared by PBO, the ledger, and param sensitivity.
+    config_results = run_param_configs(
         factory,
         params,
         steps,
@@ -392,13 +454,14 @@ def run_study(
     # Ledger: log every config as a trial so the DSR deflates by the EFFECTIVE
     # (cluster-adjusted) trial count — a one-parameter sweep is ~1 effective trial.
     if log_trials:
-        for label, stream in config_streams.items():
-            ledger.log_trial(spec.name, {"config": label}, stream.tolist())
+        for label, cfg_result in config_results.items():
+            ledger.log_trial(spec.name, {"config": label}, cfg_result.net_returns.tolist())
     moments = return_stats(net)
     dsr = ledger.deflated_sharpe(moments.sharpe, moments.n, moments.skew, moments.kurtosis)
 
-    # PBO across the parameter configs (needs >= 2 configs and enough periods).
-    pbo = _pbo_across_configs(config_streams, n_splits=pbo_splits)
+    # PBO across the parameter configs, time-aligned by trading day (needs >= 2
+    # configs and enough days, else NaN -> criterion 3 fails closed).
+    pbo = _pbo_across_configs(config_results, n_splits=pbo_splits, timezone=timezone)
 
     # Robustness battery + regime stability.
     robustness = run_robustness_battery(
@@ -409,30 +472,34 @@ def run_study(
         cost_model,
         periods_per_year=periods_per_year,
         cross_symbol_candles=cross_symbol_candles,
-        config_streams=config_streams,
+        config_results=config_results,
         notional_per_trade=notional_per_trade,
         timezone=timezone,
     )
-    regime_medians, regime_without_best = regime_bucket_stats(
-        trades, periods_per_year, labeler=regime_labeler, timezone=timezone
+    # Criterion 7 defaults to the year x vol/trend partition (B-4), built from the
+    # scored candles; a caller may override with an explicit labeler.
+    labeler = regime_labeler or build_regime_labeler(candles, timezone=timezone)
+    regime_bucket_sharpes, regime_without_best = regime_bucket_stats(
+        trades, periods_per_year, labeler=labeler, timezone=timezone
     )
+    primary_symbol = candles[0].symbol if candles else ""
 
     inputs = KillGateInputs(
-        cpcv_median_path_sharpe=cpcv.median_path_sharpe,
-        cpcv_positive_fraction=cpcv.positive_fraction,
-        cpcv_tenth_percentile=cpcv.tenth_percentile,
+        cpcv_path_sharpes=cpcv.path_sharpes,
         dsr=dsr,
         pbo=pbo,
         profit_factor=stats.profit_factor,
         top5_winners_fraction=stats.top5_winners_fraction,
         expectancy=stats.expectancy,
         round_trip_cost=cost_model.round_trip_cost_fraction(notional_per_trade),
-        param_sensitivity_min_net_sharpe=robustness.param_sensitivity_min_net_sharpe,
+        param_config_sharpes=robustness.param_config_sharpes,
+        has_tunable_params=bool(steps),
+        cross_symbol_sharpes=robustness.cross_symbol_sharpes,
+        primary_symbol=primary_symbol,
         mc_shuffle_beat_fraction=robustness.mc_shuffle_beat_fraction,
-        cross_symbol_positive_fraction=robustness.cross_symbol_positive_fraction,
         two_engines_reconcile=robustness.two_engines_reconcile,
         noise_survives=robustness.noise_survives,
-        regime_bucket_medians=regime_medians,
+        regime_bucket_sharpes=regime_bucket_sharpes,
         regime_positive_without_best=regime_without_best,
     )
     kill_gate: KillGateResult = evaluate_kill_gate(inputs, thresholds)
@@ -454,13 +521,50 @@ def run_study(
     )
 
 
-def _pbo_across_configs(config_streams: Mapping[str, FloatArray], *, n_splits: int) -> float:
-    """PBO over the parameter-config performance matrix; NaN if it cannot be formed."""
-    streams = [s for s in config_streams.values() if s.size > 0]
-    if len(streams) < 2:
+def _daily_net_pnl(trades: Sequence[Trade], timezone: str) -> dict[date, float]:
+    """Sum each trade's net return into its IST entry trading day."""
+    tz = ZoneInfo(timezone)
+    daily: dict[date, float] = {}
+    for trade in trades:
+        day = trade.entry_time.astimezone(tz).date()
+        daily[day] = daily.get(day, 0.0) + trade.net_return
+    return daily
+
+
+def _pbo_across_configs(
+    config_results: Mapping[str, BacktestResult], *, n_splits: int, timezone: str
+) -> float:
+    """PBO over the parameter configs, time-aligned by trading day (B-2).
+
+    Each config's trades are aggregated to per-day net P&L and reindexed onto the
+    UNION of trading days (a no-trade day contributes 0.0), so a matrix row is one
+    trading day — the SAME period across every config — and CSCV's IS/OOS blocks
+    are coherent time partitions, not positionally-stacked j-th trades landing at
+    different timestamps across configs. A trading day is the natural unit of
+    independence here: intraday square-off means no position crosses the close.
+    Returns NaN — which the kill-gate reads as a FAILED criterion 3, never a pass —
+    when the matrix cannot be formed (fewer than 2 configs, or fewer trading days
+    than blocks).
+    """
+    per_day = {
+        label: _daily_net_pnl(result.trades, timezone)
+        for label, result in config_results.items()
+        if result.trades
+    }
+    if len(per_day) < 2:
         return float("nan")  # a single-config strategy has no cross-config overfitting to measure
-    length = min(s.size for s in streams)
-    if length < n_splits:
+    all_days = sorted({day for daily in per_day.values() for day in daily})
+    if len(all_days) < n_splits:
         return float("nan")
-    matrix = np.column_stack([s[:length] for s in streams])
-    return probability_of_backtest_overfitting(matrix, n_splits=n_splits).pbo
+    matrix = np.array(
+        [[daily.get(day, 0.0) for daily in per_day.values()] for day in all_days],
+        dtype=np.float64,
+    )
+    # Per-day label windows (a point at each day's start); a 1-trading-day embargo
+    # then purges adjacent days at IS/OOS block boundaries via the shared primitive.
+    tz = ZoneInfo(timezone)
+    entry_times = [datetime(d.year, d.month, d.day, tzinfo=tz) for d in all_days]
+    exit_times = list(entry_times)
+    return probability_of_backtest_overfitting(
+        matrix, entry_times, exit_times, n_splits=n_splits
+    ).pbo

@@ -12,12 +12,16 @@ criterion 3 pins ``PBO < 0.20``.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from itertools import combinations
 
 import numpy as np
 import numpy.typing as npt
 from scipy import stats
+
+from lab.research.validation.splitter import ONE_TRADING_DAY, purge_indices
 
 FloatArray = npt.NDArray[np.float64]
 
@@ -43,14 +47,29 @@ def _sharpe_per_config(block: FloatArray) -> FloatArray:
 
 
 def probability_of_backtest_overfitting(
-    performance_matrix: npt.ArrayLike, *, n_splits: int = DEFAULT_N_SPLITS
+    performance_matrix: npt.ArrayLike,
+    entry_times: Sequence[datetime],
+    exit_times: Sequence[datetime],
+    *,
+    n_splits: int = DEFAULT_N_SPLITS,
+    embargo: timedelta = ONE_TRADING_DAY,
 ) -> PBOResult:
     """Estimate PBO from a ``(T periods, N configs)`` performance matrix.
 
+    The matrix rows are time-aligned periods (the SAME period across every config)
+    and ``entry_times``/``exit_times`` are each row's label window, so CSCV's
+    in-sample/out-of-sample blocks are coherent time partitions. Each split purges
+    the OOS rows whose label window overlaps an in-sample block span (embargo-widened)
+    through the shared :func:`~lab.research.validation.splitter.purge_indices`
+    primitive — the same one CPCV uses — so the two cannot drift.
+
     Args:
         performance_matrix: Per-period returns per configuration (columns are the
-            strategy's variants).
+            strategy's variants; rows are aligned periods).
+        entry_times: Label-window start per row (length == number of periods).
+        exit_times: Label-window end per row.
         n_splits: Number of CSCV time blocks (even).
+        embargo: Buffer applied at each IS/OOS boundary (default one trading day).
     """
     matrix = np.asarray(performance_matrix, dtype=np.float64)
     if matrix.ndim != 2:
@@ -58,17 +77,35 @@ def probability_of_backtest_overfitting(
     n_periods, n_configs = matrix.shape
     if n_configs < 2:
         raise ValueError("PBO needs at least 2 configurations")
+    if not len(entry_times) == len(exit_times) == n_periods:
+        raise ValueError("entry_times and exit_times must have one entry per matrix row")
     if n_splits % 2 != 0:
         raise ValueError("n_splits must be even")
     if n_periods < n_splits:
         raise ValueError("need at least n_splits periods")
 
     blocks = np.array_split(np.arange(n_periods), n_splits)
+    block_spans = [
+        (min(entry_times[int(i)] for i in block), max(exit_times[int(i)] for i in block))
+        for block in blocks
+    ]
     logits: list[float] = []
     for is_blocks in combinations(range(n_splits), n_splits // 2):
         is_set = set(is_blocks)
         is_idx = np.concatenate([blocks[b] for b in range(n_splits) if b in is_set])
-        oos_idx = np.concatenate([blocks[b] for b in range(n_splits) if b not in is_set])
+        oos_all = np.concatenate([blocks[b] for b in range(n_splits) if b not in is_set])
+        # Purge OOS rows overlapping an in-sample block span (embargoed), via the
+        # shared primitive so CSCV and CPCV purge identically.
+        oos_kept = purge_indices(
+            (int(i) for i in oos_all),
+            entry_times,
+            exit_times,
+            [block_spans[b] for b in is_blocks],
+            embargo=embargo,
+        )
+        if len(oos_kept) < 2:
+            continue  # a 0/1-row OOS (after purging) cannot yield a Sharpe
+        oos_idx = np.array(oos_kept, dtype=np.int64)
 
         is_perf = _sharpe_per_config(matrix[is_idx])
         oos_perf = _sharpe_per_config(matrix[oos_idx])
