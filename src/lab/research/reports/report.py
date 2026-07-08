@@ -139,9 +139,16 @@ def render_report(report: StudyReport) -> str:
     if report.provisional:
         lines.append(f"- **PROVISIONAL — upper bound:** {report.provisional_note}")
     lines += [
+        # Show BOTH counts unambiguously: the number of (finite, post-purge)
+        # combination-Sharpes the distribution is actually judged over — the same
+        # `n_finite_paths` the kill-gate's evidence floor checks — and the phi =
+        # C(N,k)*k/N reconstructed-path figure. (A bare "5 paths" invited misreading
+        # the judged count against the >=8 floor.)
         f"- **CPCV median path-Sharpe (net):** {report.cpcv.median_path_sharpe:.3f} "
         f"(positive paths {report.cpcv.positive_fraction:.2f}, "
-        f"10th pct {report.cpcv.tenth_percentile:.3f}, {report.cpcv.n_paths:.0f} paths)",
+        f"10th pct {report.cpcv.tenth_percentile:.3f}; "
+        f"{report.cpcv.n_finite_paths} combination-paths judged, "
+        f"φ={report.cpcv.n_paths:.0f} reconstructed)",
         f"- **DSR:** {report.dsr:.3f} · **PBO:** {report.pbo:.3f} · "
         f"**effective trials:** {report.effective_trials:.2f}",
         f"- **Trades:** {report.trades.n_trades}; profit factor "
