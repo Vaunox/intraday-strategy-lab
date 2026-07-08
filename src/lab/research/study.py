@@ -24,7 +24,7 @@ import numpy.typing as npt
 
 from lab.core.constants import INDIA_TZ
 from lab.core.interfaces import StrategySpec
-from lab.core.types import Candle
+from lab.core.types import Candle, Verdict
 from lab.research.reports.killgate import (
     KillGateInputs,
     KillGateResult,
@@ -54,6 +54,69 @@ FloatArray = npt.NDArray[np.float64]
 #: parameters supply one; a parameter-free spec uses the identity default).
 SpecFactory = Callable[[Mapping[str, float]], StrategySpec]
 DEFAULT_NOTIONAL = 100_000.0
+#: A PASS whose tightest survivorship-sensitive criterion clears by less than this
+#: relative margin is stamped provisional (survivor-biased data is an upper bound).
+DEFAULT_SURVIVORSHIP_BAND = 0.10
+
+
+def gate_pass_margin(inputs: KillGateInputs, thresholds: KillGateThresholds) -> tuple[float, str]:
+    """Tightest relative margin across the survivorship-SENSITIVE return criteria.
+
+    Survivorship inflates realized *returns*, so the sensitive gates are the
+    return/breadth ones: CPCV median path-Sharpe, profit factor, cross-symbol
+    positive fraction, and the worst-case parameter-sensitivity Sharpe. (DSR and
+    PBO are bounded overfitting probabilities — DSR maxes at 1.0 vs a 0.95 bar, so
+    a relative margin there is always tiny and misleading — and are excluded, as
+    are the boolean criteria.) Relative margin is ``(obs - thr)/thr``. Returns
+    ``(margin, criterion)``; only meaningful for a PASS. ``inf`` if none apply.
+    """
+    candidates: list[tuple[str, float, float]] = [
+        # name, observed, threshold (all higher-is-better, positive threshold)
+        ("cpcv_median", inputs.cpcv_median_path_sharpe, thresholds.cpcv_median_path_sharpe_min),
+        ("profit_factor", inputs.profit_factor, thresholds.profit_factor_min),
+        (
+            "cross_symbol",
+            inputs.cross_symbol_positive_fraction,
+            thresholds.cross_symbol_positive_fraction_min,
+        ),
+        (
+            "param_sensitivity",
+            inputs.param_sensitivity_min_net_sharpe,
+            thresholds.param_sensitivity_net_sharpe_min,
+        ),
+    ]
+    tightest = float("inf")
+    tightest_name = ""
+    for name, observed, threshold in candidates:
+        if not np.isfinite(observed) or threshold <= 0.0:
+            continue
+        margin = (observed - threshold) / threshold
+        if margin < tightest:
+            tightest, tightest_name = margin, name
+    return tightest, tightest_name
+
+
+def survivorship_stamp(
+    verdict: Verdict,
+    inputs: KillGateInputs,
+    thresholds: KillGateThresholds,
+    band: float = DEFAULT_SURVIVORSHIP_BAND,
+) -> tuple[bool, str]:
+    """Return ``(provisional, note)`` for a study on survivor-biased data.
+
+    Only a PASS can be provisional, and only when its tightest survivorship-sensitive
+    criterion clears by less than ``band`` (relative) — the sole place a small upward
+    bias could flip the verdict. Wide-margin passes and KILLs are never stamped.
+    """
+    if verdict is not Verdict.PASS:
+        return False, ""
+    margin, criterion = gate_pass_margin(inputs, thresholds)
+    if np.isfinite(margin) and margin < band:
+        return True, (
+            f"narrow pass ({criterion} clears its gate by {margin:.0%}); on survivor-only "
+            f"data this is an upper bound (see RESEARCH_FINDINGS 2.1)"
+        )
+    return False, ""
 
 
 # --- parameter-variant runs (shared by PBO, the ledger, and param sensitivity) - #
@@ -276,6 +339,7 @@ def run_study(
     cross_symbol_candles: Mapping[str, Sequence[Candle]] | None = None,
     regime_labeler: Callable[[Trade], str] | None = None,
     log_trials: bool = True,
+    survivorship_band: float = DEFAULT_SURVIVORSHIP_BAND,
     timezone: str = INDIA_TZ,
 ) -> StudyReport:
     """Run one strategy through the whole harness and return its :class:`StudyReport`.
@@ -372,6 +436,9 @@ def run_study(
         regime_positive_without_best=regime_without_best,
     )
     kill_gate: KillGateResult = evaluate_kill_gate(inputs, thresholds)
+    provisional, provisional_note = survivorship_stamp(
+        kill_gate.verdict, inputs, thresholds, survivorship_band
+    )
 
     return StudyReport(
         strategy=spec.name,
@@ -382,6 +449,8 @@ def run_study(
         trades=stats,
         kill_gate=kill_gate,
         equity=equity,
+        provisional=provisional,
+        provisional_note=provisional_note,
     )
 
 

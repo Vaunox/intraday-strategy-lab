@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -13,14 +13,16 @@ import numpy as np
 import pytest
 
 from lab.core.types import BarInterval, Candle, Side, StrategySignal, Verdict
-from lab.research.reports.killgate import load_kill_gate_thresholds
+from lab.research.reports.killgate import KillGateInputs, load_kill_gate_thresholds
 from lab.research.reports.report import StudyReport, equity_curve, render_report
 from lab.research.study import (
     enumerate_param_configs,
+    gate_pass_margin,
     regime_bucket_stats,
     run_param_configs,
     run_robustness_battery,
     run_study,
+    survivorship_stamp,
 )
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.backtester import Trade
@@ -229,3 +231,74 @@ def test_run_study_without_params_has_nan_pbo(tmp_path: Path) -> None:
     assert math.isnan(report.pbo)
     assert ledger.count() == 1  # only the base config
     assert report.kill_gate.verdict is Verdict.KILL  # NaN PBO fails criterion 3
+
+
+# --- provisional / upper-bound stamp (survivorship handling) ---------------- #
+THRESH = load_kill_gate_thresholds(REPO_CONFIG)
+
+
+def _kg_inputs(**over: object) -> KillGateInputs:
+    """A fully-passing KillGateInputs with wide margins; override to make one thin."""
+    base: dict[str, object] = {
+        "cpcv_median_path_sharpe": 2.0,
+        "cpcv_positive_fraction": 0.99,
+        "cpcv_tenth_percentile": 0.5,
+        "dsr": 0.99,
+        "pbo": 0.05,
+        "profit_factor": 2.0,
+        "top5_winners_fraction": 0.2,
+        "expectancy": 0.01,
+        "round_trip_cost": 0.002,
+        "param_sensitivity_min_net_sharpe": 1.5,
+        "mc_shuffle_beat_fraction": 0.99,
+        "cross_symbol_positive_fraction": 1.0,
+        "two_engines_reconcile": True,
+        "noise_survives": True,
+        "regime_bucket_medians": (1.0, 1.0),
+        "regime_positive_without_best": True,
+    }
+    base.update(over)
+    return KillGateInputs(**base)  # type: ignore[arg-type]
+
+
+def test_gate_pass_margin_picks_tightest_return_criterion() -> None:
+    margin, criterion = gate_pass_margin(_kg_inputs(cpcv_median_path_sharpe=1.05), THRESH)
+    assert criterion == "cpcv_median"
+    assert margin == pytest.approx(0.05)  # (1.05 - 1.0) / 1.0
+
+
+def test_survivorship_stamp_flags_narrow_pass() -> None:
+    provisional, note = survivorship_stamp(
+        Verdict.PASS, _kg_inputs(cpcv_median_path_sharpe=1.05), THRESH
+    )
+    assert provisional
+    assert "upper bound" in note and "cpcv_median" in note
+
+
+def test_survivorship_stamp_ignores_wide_pass() -> None:
+    provisional, note = survivorship_stamp(Verdict.PASS, _kg_inputs(), THRESH)
+    assert not provisional and note == ""
+
+
+def test_survivorship_stamp_never_stamps_kill() -> None:
+    provisional, _ = survivorship_stamp(
+        Verdict.KILL, _kg_inputs(cpcv_median_path_sharpe=1.05), THRESH
+    )
+    assert not provisional
+
+
+def test_render_report_shows_provisional_stamp_only_when_set(tmp_path: Path) -> None:
+    candles = _series("SYN", 20)
+    report = run_study(
+        ThresholdMomentumSpec(0.0),
+        candles,
+        load_cost_model(REPO_CONFIG),
+        THRESH,
+        TrialLedger(tmp_path / "trials"),
+        periods_per_year=PERIODS,
+        cpcv_embargo=NO_EMBARGO,
+    )
+    assert not report.provisional  # a KILL is never stamped
+    assert "PROVISIONAL" not in render_report(report)
+    stamped = replace(report, provisional=True, provisional_note="narrow pass; upper bound")
+    assert "PROVISIONAL" in render_report(stamped)

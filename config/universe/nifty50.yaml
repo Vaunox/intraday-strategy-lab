@@ -1,0 +1,105 @@
+# NIFTY 50 universe artifact — provenance-stamped.
+#
+# The universe is a versioned, SOURCED, DATED artifact — never an ad-hoc list.
+# (An earlier list was hardcoded from model knowledge with no source and no
+# as-of; it was a stale ~2024 snapshot. This file replaces it.)
+
+index: "NIFTY 50"
+
+# Effective date of the constituent set below (the reconstitution that produced it).
+as_of: "2025-09-30"
+# When the constituent set was read from the source.
+verified_on: "2025-12-08"
+# Authoritative source of the constituent set.
+source: >-
+  NSE Indices (niftyindices.com) NIFTY 50 constituents, cross-checked against
+  the Wikipedia "NIFTY 50" article snapshot dated 2025-12-08. Regenerated
+  2026-07-05.
+
+# The current, authoritative NIFTY 50 constituents (NSE trading symbols).
+constituents:
+  - ADANIENT
+  - ADANIPORTS
+  - APOLLOHOSP
+  - ASIANPAINT
+  - AXISBANK
+  - BAJAJ-AUTO
+  - BAJFINANCE
+  - BAJAJFINSV
+  - BEL
+  - BHARTIARTL
+  - CIPLA
+  - COALINDIA
+  - DRREDDY
+  - EICHERMOT
+  - ETERNAL        # formerly ZOMATO (renamed 2025); added 2025-03-28
+  - GRASIM
+  - HCLTECH
+  - HDFCBANK
+  - HDFCLIFE
+  - HINDALCO
+  - HINDUNILVR
+  - ICICIBANK
+  - INDIGO         # InterGlobe Aviation; added 2025-09-30
+  - INFY
+  - ITC
+  - JIOFIN         # Jio Financial Services; added 2025-03-28
+  - JSWSTEEL
+  - KOTAKBANK
+  - LT
+  - M&M
+  - MARUTI
+  - MAXHEALTH      # Max Healthcare; added 2025-09-30
+  - NESTLEIND
+  - NTPC
+  - ONGC
+  - POWERGRID
+  - RELIANCE
+  - SBILIFE
+  - SHRIRAMFIN
+  - SBIN
+  - SUNPHARMA
+  - TCS
+  - TATACONSUM
+  - TMPV           # Tata Motors Passenger Vehicles (post-demerger successor of TATAMOTORS)
+  - TATASTEEL
+  - TECHM
+  - TITAN
+  - TRENT
+  - ULTRACEMCO
+  - WIPRO
+
+# --- as-built backfill: what is actually on disk in data/raw ------------------
+# The historical backfill was populated BEFORE this artifact existed, from the
+# stale ~2024 list. Per an explicit decision it is kept as-is for now (not
+# re-pulled). This block records the discrepancy so studies stay honest; see the
+# survivorship-bias limitation in docs/RESEARCH_FINDINGS.md.
+backfill:
+  as_built: "2026-07-05"
+  interval: "5minute"
+  range:
+    start: "2015-02-01"
+    end: "2026-07-05"
+  symbols_present: 49
+  candles: 8958811
+  provenance: >-
+    Backfilled from a STALE, UNSOURCED ~2024 NIFTY-50 approximation (model
+    knowledge), NOT the constituent set above. Survivor-biased. Delta below.
+  # In the backfill but NO LONGER in the NIFTY 50 (stale inclusions).
+  stale_included:
+    - BPCL
+    - BRITANNIA
+    - HEROMOTOCO    # removed 2025-09-30
+    - INDUSINDBK    # removed 2025-09-30
+  # In the current NIFTY 50 but NOT in the backfill (missing).
+  current_missing:
+    - ETERNAL
+    - INDIGO
+    - JIOFIN
+    - MAXHEALTH
+    - TMPV
+  # In the stale list, NOT backfilled (absent from the live instrument dump);
+  # also not current members — corporate-action / demotion cases.
+  unavailable_from_live_dump:
+    - LTIM          # demoted to NIFTY Next 50 (2024-09-30); absent from the EQ dump
+    - TATAMOTORS    # symbol retired by the 2025 demerger (-> TMPV / TMCV)

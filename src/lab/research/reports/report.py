@@ -103,6 +103,8 @@ class StudyReport:
     trades: TradeStatistics
     kill_gate: KillGateResult
     equity: EquityCurve | None = None
+    provisional: bool = False  # narrow gate pass on survivor-biased data (upper bound)
+    provisional_note: str = ""
 
 
 #: Unicode blocks for a compact inline equity sparkline (low -> high).
@@ -133,6 +135,10 @@ def render_report(report: StudyReport) -> str:
         f"### {report.strategy}",
         "",
         f"- **Verdict:** {kg.verdict.value.upper()}",
+    ]
+    if report.provisional:
+        lines.append(f"- **PROVISIONAL — upper bound:** {report.provisional_note}")
+    lines += [
         f"- **CPCV median path-Sharpe (net):** {report.cpcv.median_path_sharpe:.3f} "
         f"(positive paths {report.cpcv.positive_fraction:.2f}, "
         f"10th pct {report.cpcv.tenth_percentile:.3f}, {report.cpcv.n_paths:.0f} paths)",
