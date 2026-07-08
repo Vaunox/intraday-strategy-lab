@@ -15,6 +15,7 @@ target, forward-filled until the next signal or the day boundary.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import time
 from zoneinfo import ZoneInfo
 
 from lab.core.constants import INDIA_TZ
@@ -56,10 +57,20 @@ def run_strategy(
     *,
     notional_per_trade: float = 100_000.0,
     timezone: str = INDIA_TZ,
+    square_off: time | None = None,
 ) -> BacktestResult:
-    """Run ``spec`` over ``candles`` through the cost-inclusive backtester."""
+    """Run ``spec`` over ``candles`` through the cost-inclusive backtester.
+
+    ``square_off`` (the configured MIS cutoff) is forwarded to the backtester so
+    positions never carry past it, even when the bar grid runs later.
+    """
     signals = spec.generate_signals(candles)
     targets = signals_to_targets(candles, signals, timezone=timezone)
     return run_backtest(
-        candles, targets, cost_model, notional_per_trade=notional_per_trade, timezone=timezone
+        candles,
+        targets,
+        cost_model,
+        notional_per_trade=notional_per_trade,
+        timezone=timezone,
+        square_off=square_off,
     )
