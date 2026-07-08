@@ -139,6 +139,33 @@ def test_extreme_but_real_values_are_not_flagged_as_stubs() -> None:
     assert evaluate_kill_gate(strong, THRESH).verdict is Verdict.PASS
 
 
+# --- criterion 5: expectancy hurdle counted once (net > 0, not net > cost) --- #
+def test_criterion5_expectancy_is_net_positive_not_double_counted() -> None:
+    """Criterion 5's expectancy leg requires the per-trade edge to clear the round-trip
+    cost COUNTED ONCE. `expectancy` arrives net of cost (mean Trade.net_return), so the
+    leg is `net > 0` (equivalently gross expectancy > round-trip cost) — NOT the earlier
+    accidental `net > cost` (gross > ~2x cost) hurdle. Guards killgate.py's criterion-5
+    comparison from drifting back to the double-count.
+    """
+    cost = 0.0018
+
+    # Gross edge in (1x, 2x) cost -> net in (0, cost): PASSES now; would have KILLed at 2x.
+    marginal = _passing_inputs(expectancy=0.5 * cost, round_trip_cost=cost)
+    marginal_result = evaluate_kill_gate(marginal, THRESH)
+    assert next(c for c in marginal_result.criteria if c.number == 5).passed
+    assert marginal_result.verdict is Verdict.PASS
+
+    # Gross edge below 1x cost -> net < 0: cost-dead, FAILS.
+    dead = _passing_inputs(expectancy=-0.2 * cost, round_trip_cost=cost)
+    dead_result = evaluate_kill_gate(dead, THRESH)
+    assert not next(c for c in dead_result.criteria if c.number == 5).passed
+    assert dead_result.verdict is Verdict.KILL
+
+    # Break-even (net == 0) is not a positive edge (strict >): FAILS.
+    breakeven = evaluate_kill_gate(_passing_inputs(expectancy=0.0, round_trip_cost=cost), THRESH)
+    assert not next(c for c in breakeven.criteria if c.number == 5).passed
+
+
 # --- trade statistics ------------------------------------------------------- #
 def _trade(net: float) -> Trade:
     ts = datetime(2024, 7, 15, 9, 15, tzinfo=IST)
