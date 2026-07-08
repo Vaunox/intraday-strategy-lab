@@ -122,3 +122,19 @@ def test_square_off_and_past_square_off(calendar: NseCalendar) -> None:
 def test_is_open(calendar: NseCalendar) -> None:
     assert calendar.is_open(_ist(2024, 7, 15, 10, 0))
     assert not calendar.is_open(_ist(2024, 7, 15, 16, 30))
+
+
+def test_is_regular_session_time(calendar: NseCalendar) -> None:
+    # Pure time-of-day window [09:15, 15:30) — the intraday-grid filter.
+    assert calendar.is_regular_session_time(_ist(2024, 7, 15, 10, 0))
+    assert calendar.is_regular_session_time(_ist(2024, 7, 15, 9, 15))  # open inclusive
+    assert calendar.is_regular_session_time(_ist(2024, 7, 15, 15, 25))  # last 5-min bar
+    assert not calendar.is_regular_session_time(_ist(2024, 7, 15, 9, 0))  # pre-open
+    assert not calendar.is_regular_session_time(_ist(2024, 7, 15, 15, 30))  # close exclusive
+    assert not calendar.is_regular_session_time(_ist(2024, 7, 15, 15, 40))  # post-close
+    assert not calendar.is_regular_session_time(_ist(2024, 11, 1, 18, 30))  # Muhurat evening
+
+
+def test_is_regular_session_time_rejects_naive(calendar: NseCalendar) -> None:
+    with pytest.raises(ValueError, match="timezone-aware"):
+        calendar.is_regular_session_time(datetime(2024, 7, 15, 10, 0))  # naive

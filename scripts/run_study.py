@@ -22,6 +22,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from pathlib import Path
@@ -31,7 +32,9 @@ from lab.core.config import configure_logging_from_settings, load_settings
 from lab.core.constants import INDIA_TZ
 from lab.core.interfaces import StrategySpec
 from lab.core.logging import get_logger
+from lab.core.nse_calendar import NseCalendar
 from lab.core.types import BarInterval, Candle
+from lab.data.hygiene.session import regular_session_candles
 from lab.data.store.parquet_archive import ParquetArchive
 from lab.research.reports.killgate import load_kill_gate_thresholds
 from lab.research.reports.paper import append_study_section
@@ -79,11 +82,18 @@ def _read(
 
 def main(argv: list[str] | None = None) -> None:
     """Run the study described by the command-line arguments."""
+    # Force UTF-8 stdout so the rendered report's non-ASCII glyphs (equity sparkline
+    # blocks, middle dot, phi) print under a redirected pipe on Windows (cp1252
+    # default) instead of crashing the run with UnicodeEncodeError after the whole
+    # pipeline has already completed.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_args(argv)
     config_dir = Path(args.config_dir)
     settings = load_settings(args.env, config_dir=config_dir)
     configure_logging_from_settings(settings)
     log = get_logger("scripts.run_study")
+    calendar = NseCalendar.from_settings(settings)
 
     cost_model = load_cost_model(config_dir)
     thresholds = load_kill_gate_thresholds(config_dir)
@@ -96,16 +106,28 @@ def main(argv: list[str] | None = None) -> None:
     end = datetime(end_day.year, end_day.month, end_day.day, 23, 59, 59, tzinfo=tz)
 
     archive = ParquetArchive(Path(args.data_root))
-    candles = _read(archive, args.symbol, interval, start, end)
+    raw_candles = _read(archive, args.symbol, interval, start, end)
+    # Filter to the regular session (drops Muhurat evening bars etc.) at the ingest
+    # boundary, before anything computes features or backtests; the raw store is
+    # untouched.
+    candles = regular_session_candles(raw_candles, calendar)
     if not candles:
         raise SystemExit(
             f"no candles for {args.symbol} {interval.value} in [{args.start}, {args.end}] "
             f"under {args.data_root} — backfill first"
         )
+    if len(candles) != len(raw_candles):
+        log.info(
+            "session_filter",
+            symbol=args.symbol,
+            kept=len(candles),
+            dropped=len(raw_candles) - len(candles),
+        )
 
     cross_symbols = [s.strip() for s in (args.cross_symbols or "").split(",") if s.strip()]
     cross_candles: dict[str, Sequence[Candle]] = {
-        symbol: _read(archive, symbol, interval, start, end) for symbol in cross_symbols
+        symbol: regular_session_candles(_read(archive, symbol, interval, start, end), calendar)
+        for symbol in cross_symbols
     }
     cross_candles = {symbol: series for symbol, series in cross_candles.items() if series}
 
