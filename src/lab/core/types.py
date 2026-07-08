@@ -54,6 +54,9 @@ class Verdict(Enum):
 
     PASS = "pass"  # noqa: S105 — kill-gate verdict label, not a credential
     KILL = "kill"
+    #: A criterion's input arrived under-shaped (a stub, not a genuinely computed
+    #: value); the gate refuses to certify. Neither PASS nor KILL (Phase-3 B-1).
+    INSUFFICIENT = "insufficient"
 
 
 def _require_nonempty(value: str, field: str) -> None:

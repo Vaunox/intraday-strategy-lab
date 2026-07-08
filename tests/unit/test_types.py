@@ -86,4 +86,4 @@ def test_enum_values_match_kite_intervals() -> None:
     # BarInterval values mirror Kite's interval strings (Phase 1 mapping).
     assert BarInterval.MIN_5.value == "5minute"
     assert BarInterval.DAY.value == "day"
-    assert {v.value for v in Verdict} == {"pass", "kill"}
+    assert {v.value for v in Verdict} == {"pass", "kill", "insufficient"}
