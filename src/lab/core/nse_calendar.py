@@ -144,6 +144,26 @@ class NseCalendar:
         """Return whether the regular session is live at ``moment``."""
         return self.phase_at(moment) is SessionPhase.REGULAR
 
+    def is_regular_session_time(self, moment: datetime) -> bool:
+        """Return whether ``moment``'s IST time-of-day is within the regular session.
+
+        A pure time-of-day window check ``[session.open, session.close)`` (e.g.
+        09:15-15:30). Unlike :meth:`is_open` it does NOT require a trading day — its
+        sole job is to filter the intraday grid to the regular session so
+        out-of-session bars (Diwali Muhurat evening sessions ~18:15-19:15, pre-open,
+        post-close) cannot enter feature/backtest computation, while the immutable
+        raw store stays whole. Same boundary-filtering principle as the square-off
+        cutoff (fix the boundary, keep the data).
+
+        Raises:
+            ValueError: If ``moment`` is timezone-naive.
+        """
+        if moment.tzinfo is None or moment.tzinfo.utcoffset(moment) is None:
+            raise ValueError(f"moment must be timezone-aware; got naive {moment!r}")
+        now = moment.astimezone(self._tz).time()
+        session = self._settings.session
+        return session.open <= now < session.close
+
     def is_past_square_off(self, moment: datetime) -> bool:
         """Return whether ``moment`` is at/after the square-off cutoff on a trading day.
 

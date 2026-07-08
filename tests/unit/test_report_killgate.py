@@ -23,12 +23,13 @@ from lab.research.reports.killgate import (
     load_kill_gate_thresholds,
 )
 from lab.research.reports.paper import append_study_section
-from lab.research.reports.report import render_report, trade_statistics
+from lab.research.reports.report import StudyReport, render_report, trade_statistics
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.study import run_study
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.backtester import Trade
 from lab.research.validation.costs import load_cost_model
+from lab.research.validation.cpcv import CPCVResult, cpcv_distribution_summary
 
 REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
 IST = ZoneInfo("Asia/Kolkata")
@@ -243,3 +244,29 @@ def test_gate2_end_to_end_reference_spec_through_run_study(tmp_path: Path) -> No
     assert "reference_momentum" in text
     assert "KILL" in text
     assert "Seven-point kill-gate" in render_report(report)
+
+
+# --- CPCV path-count label (display only) ----------------------------------- #
+def test_cpcv_label_shows_judged_count_and_phi_unambiguously() -> None:
+    """The report's CPCV line shows BOTH the number of combination-paths judged
+    (= n_finite_paths, exactly what the kill-gate's evidence floor checks) and the
+    phi reconstructed-path count — no bare '5 paths' to misread against the >= 8 floor."""
+    # 10 combination-Sharpes, 2 purged-empty (NaN) -> 8 judged; phi = C(6,2)*2/6 = 5.
+    path_sharpes = (1.2, 1.3, float("nan"), 1.4, 1.5, 1.6, float("nan"), 1.7, 1.8, 1.9)
+    cpcv = CPCVResult(path_sharpes=path_sharpes, n_groups=6, k_test_groups=2, n_paths=5.0)
+
+    # The displayed "judged" count is exactly what the guard checks.
+    assert cpcv.n_finite_paths == cpcv_distribution_summary(path_sharpes).n_finite_paths == 8
+
+    report = StudyReport(
+        strategy="x",
+        cpcv=cpcv,
+        dsr=0.0,
+        pbo=float("nan"),
+        effective_trials=1.0,
+        trades=trade_statistics([_trade(0.01), _trade(-0.01)]),
+        kill_gate=evaluate_kill_gate(_passing_inputs(cpcv_path_sharpes=path_sharpes), THRESH),
+    )
+    cpcv_line = next(ln for ln in render_report(report).splitlines() if "CPCV median" in ln)
+    assert "8 combination-paths judged" in cpcv_line
+    assert "φ=5 reconstructed" in cpcv_line

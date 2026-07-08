@@ -8,13 +8,19 @@
 - **Interval:** 5minute (raw layer)
 - **Partitions (files):** 137,137 (one per symbol/IST trading day)
 - **Date range:** 2015-02-02 → 2026-07-03
-- **Intraday grid (sampled, every symbol's first+last session):** 09:15 … 15:25 (5-min bars)
+- **Intraday grid:** regular-session bars **09:15 … 15:25** (5-min, within the 09:15–15:30 regular session). The raw archive **also contains Diwali Muhurat evening sessions out to ~19:15 IST** (one per year; see the Muhurat note below). The earlier "09:15 … 15:25" figure sampled only each symbol's first+last session, so it missed these mid-history evening bars.
 
 ## Square-off check (backtester vs configured MIS cutoff)
 
 - Configured `calendar.session.square_off` = **15:20** (`config/default.yaml`).
 - Observed **last bar timestamp = 15:25** — i.e. **> 15:20**.
-- **Consequence:** the event-driven backtester squares off at the day's *last bar* (`backtester.py`), so with this data it holds MIS positions through the 15:25 bar (~2 bars / ~10 min past the 15:20 cutoff). The 'harmless iff data ends ≤ 15:20' caveat is **not** satisfied — the square-off cleanup item (backtester should honor `square_off`, or the data be trimmed to ≤ 15:20) is a **live** correction to make before real studies, not hypothetical.
+- **Resolved.** The event-driven backtester now **honors the configured 15:20 cutoff** (merged in `fix/square-off-honor-cutoff`): with the grid running to 15:25, positions are forced flat at the last bar `< 15:20` and no entry opens at/after it — verified on live RELIANCE data (latest trade entry/exit 15:15). The 'harmless iff data ends ≤ 15:20' caveat no longer applies. Separately, the regular-session filter (below) drops any bar outside 09:15–15:30 before it reaches the backtester. Both boundaries are fixed downstream; the raw store is kept whole.
+
+## Muhurat / out-of-session bars (regular-session filter)
+
+- **Finding:** the raw 5-min archive contains **Diwali Muhurat evening-session** bars (~18:15–19:15 IST) — one session per year: 2015-11-11, 2016-10-30, 2017-10-19, 2018-11-07, 2019-10-27, 2020-11-14, 2021-11-04, 2022-10-24, 2023-11-12, 2024-11-01. For RELIANCE: **118 bars over 2015–2024 (0.056%)**. Genuine in the source parquet (correct IST, not a TZ/ingest bug) — Kite returns the Muhurat session; `config/default.yaml` treats these dates as regular-session holidays.
+- **Actual grid:** 09:15 … **19:15** IST (raw); **regular session used for studies: 09:15–15:30.**
+- **Handling:** the raw store is kept **whole** (never trimmed). Out-of-session bars (Muhurat evenings, pre-open, post-close) are filtered **downstream at the ingest boundary** — `regular_session_candles(...)` via `NseCalendar.is_regular_session_time`, wired in `scripts/run_study.py` — so they cannot enter feature or backtest computation. Same principle as the square-off cutoff (fix the boundary, keep the data).
 
 ## Candle count
 
