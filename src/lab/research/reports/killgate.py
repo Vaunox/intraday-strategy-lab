@@ -119,7 +119,9 @@ class KillGateInputs:
     # criterion 2 / 3
     dsr: float
     pbo: float
-    # criterion 5 — P&L concentration
+    # criterion 5 — P&L concentration. `expectancy` is NET of cost (mean
+    # Trade.net_return); the expectancy leg checks net > 0 (the gross edge exceeds the
+    # round-trip cost, counted once). `round_trip_cost` is retained as reported context.
     profit_factor: float
     top5_winners_fraction: float
     expectancy: float
@@ -309,10 +311,17 @@ def evaluate_kill_gate(inputs: KillGateInputs, thresholds: KillGateThresholds) -
             "P&L not concentrated",
             i.profit_factor >= t.profit_factor_min
             and i.top5_winners_fraction < t.top5_winners_fraction_max
-            and (not t.require_expectancy_over_cost or i.expectancy > i.round_trip_cost),
+            # Expectancy leg (blueprint criterion 5): the per-trade edge must exceed the
+            # round-trip cost COUNTED ONCE. `expectancy` already arrives net of that cost
+            # (mean Trade.net_return = gross - cost_fraction), so "gross > cost" is exactly
+            # "net > 0" — on the same participation-adjusted cost basis the backtester
+            # charged. Comparing net against the cost a *second* time (the prior
+            # `i.expectancy > i.round_trip_cost`) required gross > ~2x cost — an accidental
+            # double-count with no basis in the spec; corrected to net > 0.
+            and (not t.require_expectancy_over_cost or i.expectancy > 0.0),
             f"PF={i.profit_factor:.2f}>={t.profit_factor_min}, "
             f"top5={i.top5_winners_fraction:.2f}<{t.top5_winners_fraction_max}, "
-            f"expectancy={i.expectancy:.5f} vs cost={i.round_trip_cost:.5f}",
+            f"net_expectancy={i.expectancy:.5f}>0 (round-trip cost {i.round_trip_cost:.5f})",
         ),
         Criterion(
             6,
