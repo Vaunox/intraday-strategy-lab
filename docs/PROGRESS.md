@@ -22,6 +22,20 @@
 
 ---
 
+## Standing rule — frozen-49 catalog studies are EXPLORATION, not verdicts (2026-07-09)
+
+Governs **every** Phase-3/4 catalog study while the universe is the **frozen-49 survivor-only** backfill (missing the 5 current NIFTY-50 members ETERNAL, INDIGO, JIOFIN, MAXHEALTH, TMPV — see `RESEARCH_FINDINGS.md` §2.1 and `config/universe/nifty50.yaml`):
+
+- A study's kill-gate result is an **exploration signal (promising / not-promising), NOT a verdict-grade result.** It carries the **provisional / upper-bound stamp regardless of PASS or KILL**, and is **not recorded as a final verdict** in the `RESEARCH_FINDINGS.md` §4.3 scorecard.
+- A **verdict-grade** run requires the 5 current members **backfilled first**. If a frozen-49 study looks promising, the next step is **backfill-the-5-then-rerun for the real verdict** — never "record the pass."
+- **Believe the gate; never tune toward a pass.** Whatever the kill-gate says on a real strategy stands: do **not** adjust thresholds, the spec, or the universe to rescue a result. A KILL on a genuine idea is a real, valuable finding — log the honest negative and move to the next study. (The reference spec was built to fail; catalog strategies can genuinely pass or fail — the discipline is identical either way. This is the Inviolable-Rule-1 "kill-gate is sacred" discipline, restated for the first real study.)
+
+**Honest-history notes (on record):**
+- The Muhurat / regular-session filter **never trims the raw store** — it filters the intraday grid **downstream at the ingest boundary** (09:15–15:30); the raw Parquet is kept whole (same principle as the square-off fix — fix the boundary, keep the data).
+- The pre-P3.1 clean-slate step **cleared nothing** — the system was already at **0 → 0**; it was an evidence-based **confirmation, not a destructive operation** (no ledger / results / paper data was deleted).
+
+---
+
 ## Phase 3 readiness — BLOCKING issues (opened 2026-07-08, call-site audit)
 
 > A call-site verification of the Gate-2 harness (proving each primitive is actually *invoked*, not merely defined) found four issues that must close before **Phase 3.1** opens. Two are genuine correctness gaps, not documentation. Until all four close, kill-gate criteria **3 (PBO)** and **6/7 (robustness/regime)** are **provisional**.
