@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -140,6 +140,7 @@ def run_param_configs(
     *,
     notional_per_trade: float = DEFAULT_NOTIONAL,
     timezone: str = INDIA_TZ,
+    square_off: time | None = None,
 ) -> dict[str, BacktestResult]:
     """Run each parameter config once; return ``label -> BacktestResult``.
 
@@ -155,6 +156,7 @@ def run_param_configs(
             cost_model,
             notional_per_trade=notional_per_trade,
             timezone=timezone,
+            square_off=square_off,
         )
     return results
 
@@ -196,6 +198,7 @@ def run_robustness_battery(
     mc_shuffles: int = 1000,
     mc_seed: int = 0,
     timezone: str = INDIA_TZ,
+    square_off: time | None = None,
 ) -> RobustnessReport:
     """Compose the P2.5 primitives into the kill-gate's criterion-6 inputs.
 
@@ -217,6 +220,7 @@ def run_robustness_battery(
             cost_model,
             notional_per_trade=notional_per_trade,
             timezone=timezone,
+            square_off=square_off,
         )
     )
     param_config_sharpes = {
@@ -233,10 +237,20 @@ def run_robustness_battery(
     base_spec = spec_factory(base_params)
     targets = signals_to_targets(candles, base_spec.generate_signals(candles), timezone=timezone)
     event_driven = run_backtest(
-        candles, targets, cost_model, notional_per_trade=notional_per_trade, timezone=timezone
+        candles,
+        targets,
+        cost_model,
+        notional_per_trade=notional_per_trade,
+        timezone=timezone,
+        square_off=square_off,
     )
     vectorized = vectorized_backtest(
-        candles, targets, cost_model, notional_per_trade=notional_per_trade, timezone=timezone
+        candles,
+        targets,
+        cost_model,
+        notional_per_trade=notional_per_trade,
+        timezone=timezone,
+        square_off=square_off,
     )
     reconcile = two_engines_agree(event_driven, vectorized)
 
@@ -249,6 +263,7 @@ def run_robustness_battery(
                 cost_model,
                 notional_per_trade=notional_per_trade,
                 timezone=timezone,
+                square_off=square_off,
             ).net_returns,
             periods_per_year,
         )
@@ -267,6 +282,7 @@ def run_robustness_battery(
                 cost_model,
                 notional_per_trade=notional_per_trade,
                 timezone=timezone,
+                square_off=square_off,
             ).net_returns,
             periods_per_year,
         )
@@ -403,6 +419,7 @@ def run_study(
     log_trials: bool = True,
     survivorship_band: float = DEFAULT_SURVIVORSHIP_BAND,
     timezone: str = INDIA_TZ,
+    square_off: time | None = None,
 ) -> StudyReport:
     """Run one strategy through the whole harness and return its :class:`StudyReport`.
 
@@ -411,6 +428,11 @@ def run_study(
     with tunables supply a factory and a +/-step per parameter, which drives the
     parameter-sensitivity leg, the PBO configuration matrix, and the ledger's
     effective-trial deflation of the DSR.
+
+    ``square_off`` is the configured MIS cutoff (``calendar.session.square_off``,
+    e.g. 15:20); it flows to every backtest so no leg holds past the real cutoff
+    when the bar grid runs later (Kite 5-min bars reach 15:25). Pass it for real
+    studies — the CLI does. When ``None`` the fallback is the day's last bar.
     """
     factory: SpecFactory = spec_factory or (lambda _params: spec)
     params: Mapping[str, float] = base_params or {}
@@ -423,6 +445,7 @@ def run_study(
         cost_model,
         notional_per_trade=notional_per_trade,
         timezone=timezone,
+        square_off=square_off,
     )
     trades = result.trades
     net = result.net_returns
@@ -449,6 +472,7 @@ def run_study(
         cost_model,
         notional_per_trade=notional_per_trade,
         timezone=timezone,
+        square_off=square_off,
     )
 
     # Ledger: log every config as a trial so the DSR deflates by the EFFECTIVE
@@ -475,6 +499,7 @@ def run_study(
         config_results=config_results,
         notional_per_trade=notional_per_trade,
         timezone=timezone,
+        square_off=square_off,
     )
     # Criterion 7 defaults to the year x vol/trend partition (B-4), built from the
     # scored candles; a caller may override with an explicit labeler.

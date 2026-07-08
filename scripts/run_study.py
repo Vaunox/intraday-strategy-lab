@@ -127,6 +127,7 @@ def main(argv: list[str] | None = None) -> None:
         ledger,
         periods_per_year=periods_per_year,
         cross_symbol_candles=cross_candles or None,
+        square_off=settings.calendar.session.square_off,
     )
 
     print(render_report(report))

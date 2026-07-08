@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -11,6 +11,7 @@ import pytest
 from lab.core.types import BarInterval, Candle, Side
 from lab.research.validation.backtester import run_backtest
 from lab.research.validation.costs import CostModel, load_cost_model
+from lab.research.validation.robustness import two_engines_agree, vectorized_backtest
 from lab.research.validation.splitter import PurgedKFold
 
 REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
@@ -174,3 +175,52 @@ def test_costs_reduce_net_return() -> None:
     (trade,) = run_backtest(candles, [1.0, 1.0], costs).trades
     assert trade.net_return < trade.gross_return
     assert trade.gross_return - trade.net_return == pytest.approx(trade.cost_fraction)
+
+
+# --- square-off honors the configured MIS cutoff (Phase-3 square-off fix) ---- #
+def _bar_hm(hour: int, minute: int, open_: float, high: float, low: float, close: float) -> Candle:
+    ts = datetime(2024, 7, 15, hour, minute, tzinfo=IST)
+    return Candle("X", BarInterval.MIN_5, ts, open_, high, low, close, 1000)
+
+
+def test_square_off_honors_cutoff_when_grid_runs_past() -> None:
+    # Kite's 5-min grid runs to 15:25, past the 15:20 MIS cutoff. A long held all day
+    # must square off at the last bar BEFORE 15:20 (the 15:15 bar's close = the price
+    # at 15:20) and never trade the 15:20/15:25 bars.
+    candles = [
+        _bar_hm(15, 10, 100, 100.5, 99.5, 100),
+        _bar_hm(15, 15, 100, 102.5, 99.5, 102),  # last pre-cutoff bar -> square-off here
+        _bar_hm(15, 20, 102, 105.5, 101.5, 105),  # >= 15:20: never held
+        _bar_hm(15, 25, 105, 108.5, 104.5, 108),
+    ]
+    targets = [1.0, 1.0, 1.0, 1.0]
+    result = run_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    assert result.trades
+    for tr in result.trades:
+        assert tr.exit_time.astimezone(IST).time() <= time(15, 20)  # never past the cutoff
+    last = result.trades[-1]
+    assert last.exit_time.astimezone(IST).time() == time(15, 15)  # last pre-cutoff bar
+    assert last.exit_price == 102.0  # its close = the 15:20 price
+    # The vectorized engine must reconcile under the same cutoff.
+    vec = vectorized_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    assert two_engines_agree(result, vec)
+
+
+def test_no_new_position_opens_at_or_after_cutoff() -> None:
+    # The only long signal (target index 1, the 15:15 close) would fill at the 15:20
+    # open — at the cutoff — so no position is opened, and no trade results.
+    candles = [
+        _bar_hm(15, 10, 100, 101, 99, 100),
+        _bar_hm(15, 15, 100, 101, 99, 100),
+        _bar_hm(15, 20, 100, 101, 99, 100),
+        _bar_hm(15, 25, 100, 101, 99, 100),
+    ]
+    targets = [0.0, 1.0, 1.0, 1.0]
+    assert run_backtest(candles, targets, ZERO_COST, square_off=time(15, 20)).trades == ()
+
+
+def test_square_off_none_is_legacy_last_bar() -> None:
+    # Without a cutoff, legacy behaviour: exit at the day's last bar even if it is 15:25.
+    candles = [_bar_hm(15, 10, 100, 100.5, 99.5, 100), _bar_hm(15, 25, 100, 108.5, 99.5, 108)]
+    (trade,) = run_backtest(candles, [1.0, 1.0], ZERO_COST).trades
+    assert trade.exit_time.astimezone(IST).time() == time(15, 25)

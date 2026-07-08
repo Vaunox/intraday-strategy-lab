@@ -15,6 +15,7 @@ Utilities the kill-gate's robustness criterion draws on (Part III Layer 2):
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import time
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -107,19 +108,26 @@ def vectorized_backtest(
     *,
     notional_per_trade: float = 100_000.0,
     timezone: str = INDIA_TZ,
+    square_off: time | None = None,
 ) -> BacktestResult:
     """A second, vectorized backtest engine via run-detection on held positions.
 
     The position held during bar ``k`` is ``side(target[k-1])`` (each bar executes
     the prior bar's decision at this bar's open). Maximal runs of a constant
     nonzero side are trades: entry at the run's first open, exit at the next
-    change's open, or the day's last close on square-off. Must reconcile with the
-    event-driven engine.
+    change's open, or a square-off close. The tradeable window each day ends at the
+    last bar *before* ``square_off`` (matching :func:`run_backtest`); a run reaching
+    that bar squares off at its close. Must reconcile with the event-driven engine.
     """
     if len(candles) != len(target_positions):
         raise ValueError("candles and target_positions must have equal length")
     tz = ZoneInfo(timezone)
     days = [c.timestamp.astimezone(tz).date() for c in candles]
+
+    def past_cutoff(index: int) -> bool:
+        return (
+            square_off is not None and candles[index].timestamp.astimezone(tz).time() >= square_off
+        )
 
     trades: list[Trade] = []
     start = 0
@@ -128,21 +136,28 @@ def vectorized_backtest(
         end = start
         while end < n and days[end] == days[start]:
             end += 1
-        held: list[Side | None] = [None] * (end - start)
-        for k in range(1, end - start):
+        # Last tradeable local index: the day's last bar before the square-off cutoff.
+        last = end - start - 1
+        while last >= 0 and past_cutoff(start + last):
+            last -= 1
+        if last < 0:  # the whole day is at/after the cutoff -> no trades
+            start = end
+            continue
+        held: list[Side | None] = [None] * (last + 1)
+        for k in range(1, last + 1):
             held[k] = _side(target_positions[start + k - 1])
 
         k = 0
-        while k < end - start:
+        while k <= last:
             side = held[k]
             if side is None:
                 k += 1
                 continue
             run_start = k
-            while k + 1 < end - start and held[k + 1] is side:
+            while k + 1 <= last and held[k + 1] is side:
                 k += 1
             entry = candles[start + run_start]
-            if k == end - start - 1:  # run reaches the day's last bar -> square-off
+            if k == last:  # run reaches the last pre-cutoff bar -> square-off at its close
                 exit_candle, exit_price = candles[start + k], candles[start + k].close
             else:
                 exit_candle, exit_price = candles[start + k + 1], candles[start + k + 1].open
