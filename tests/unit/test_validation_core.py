@@ -201,9 +201,17 @@ def test_square_off_honors_cutoff_when_grid_runs_past() -> None:
     last = result.trades[-1]
     assert last.exit_time.astimezone(IST).time() == time(15, 15)  # last pre-cutoff bar
     assert last.exit_price == 102.0  # its close = the 15:20 price
-    # The vectorized engine must reconcile under the same cutoff.
+    # Control: WITHOUT the cutoff the same day exits at the 15:25 last bar (price 108) —
+    # a materially different trade. So the reconciliation below is on a cutoff-CHANGED
+    # exit, and the two engines agree because BOTH honor 15:20 — not because both fell
+    # through to the last bar (that failure mode is ruled out by the next line).
+    legacy = run_backtest(candles, targets, ZERO_COST)  # no cutoff -> last-bar exit
+    assert legacy.trades[-1].exit_time.astimezone(IST).time() == time(15, 25)
+    assert legacy.trades[-1].exit_price == 108.0
+    assert not two_engines_agree(result, legacy)  # cutoff-honored trade != last-bar trade
+    # Both engines, under the cutoff, must reconcile on that cutoff-changed trade.
     vec = vectorized_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
-    assert two_engines_agree(result, vec)
+    assert two_engines_agree(result, vec)  # a cutoff-ignoring vec would equal `legacy` and fail
 
 
 def test_no_new_position_opens_at_or_after_cutoff() -> None:
@@ -224,3 +232,43 @@ def test_square_off_none_is_legacy_last_bar() -> None:
     candles = [_bar_hm(15, 10, 100, 100.5, 99.5, 100), _bar_hm(15, 25, 100, 108.5, 99.5, 108)]
     (trade,) = run_backtest(candles, [1.0, 1.0], ZERO_COST).trades
     assert trade.exit_time.astimezone(IST).time() == time(15, 25)
+
+
+def test_square_off_short_grid_falls_back_to_last_bar() -> None:
+    # A short session whose grid ends BEFORE the 15:20 cutoff (a half-day / early close,
+    # or a symbol with a truncated grid). With square_off SET it must degrade to last-bar
+    # behaviour: entries not wrongly blocked, square-off at the ACTUAL last bar, no forced
+    # close at a wrong bar — identical to the no-cutoff run, and both engines reconcile.
+    candles = [
+        _bar_hm(12, 45, 100, 100.5, 99.5, 100),
+        _bar_hm(12, 50, 100, 101.5, 99.5, 101),
+        _bar_hm(12, 55, 101, 103.5, 100.5, 103),  # day's last bar, well before 15:20
+    ]
+    targets = [1.0, 1.0, 1.0]
+    result = run_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    (tr,) = result.trades
+    assert tr.entry_time.astimezone(IST).time() == time(12, 50)  # next-bar-open entry, not blocked
+    assert tr.exit_time.astimezone(IST).time() == time(12, 55)  # squared off at the actual last bar
+    assert tr.exit_price == 103.0  # no forced close at a wrong bar
+    # Graceful: identical to the legacy (no-cutoff) run, and both engines reconcile.
+    assert two_engines_agree(result, run_backtest(candles, targets, ZERO_COST))
+    assert two_engines_agree(
+        result, vectorized_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    )
+
+
+def test_square_off_session_entirely_past_cutoff_is_a_clean_skip() -> None:
+    # A special evening session (e.g. Diwali Muhurat, ~18:00-19:00) is entirely past the
+    # 15:20 MIS cutoff. The daily cutoff makes it untradeable -> no trades, no crash, no
+    # forced close at a wrong bar (a clean skip), and both engines agree (empty == empty).
+    candles = [
+        _bar_hm(18, 15, 100, 100.5, 99.5, 100),
+        _bar_hm(18, 20, 100, 101.5, 99.5, 101),
+    ]
+    targets = [1.0, 1.0]
+    result = run_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    assert result.trades == ()
+    assert vectorized_backtest(candles, targets, ZERO_COST, square_off=time(15, 20)).trades == ()
+    assert two_engines_agree(
+        result, vectorized_backtest(candles, targets, ZERO_COST, square_off=time(15, 20))
+    )
