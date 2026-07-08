@@ -2,6 +2,8 @@
 
 *The authoritative, session-by-session build log. `MASTER_BLUEPRINT.md` Part VI mirrors the top-level status of this file. Update this at the end of **every** session, before the phase PR is opened.*
 
+*Completion Standard (process note): every "done" recorded here carries **call-site evidence** — `file:line` of the call, not the definition — per `MASTER_BLUEPRINT.md` Part I §9 "Completion Standard", the Definition of Done + PR-review checklist this Phase-2→3 audit arc established. Reviews reject "done" without it.*
+
 *Status: Phase 2 harness built and `gate-2-harness` tagged. A **2026-07-08 call-site audit** found four Phase-3-blocking issues; **all four (B-1..B-4) plus the approved criteria-1/4 stub-guard extension are now fixed in the working tree** (224 tests green; ruff + black + mypy strict clean) — see "Phase 3 readiness" below. Changes are **not yet committed**. **Phase 3.1 opens once the batch is reviewed and committed.** The gate tags (`gate-1-data`, `gate-2-harness`) predate their deliverables — treat them as never being deliverable snapshots; work from `HEAD`.*
 
 ---
