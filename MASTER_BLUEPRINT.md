@@ -106,6 +106,29 @@ Clean, readable code; clear names; small functions; formatter/linter enforced (r
 ## 8. Proper Logging
 Structured logging (not bare prints), configured once in `core/`. Appropriate levels (DEBUG/INFO/WARNING/ERROR/CRITICAL). Log every study run, config, and result. Correlation IDs to trace a run. Never log secrets. Timestamps in IST.
 
+## 9. Completion Standard — "done" means proven at the call site, not "the happy path passes"
+Established by the Phase-2→3 audit arc (`docs/PROGRESS.md` → "Phase 3 readiness"). Its finding: every defect had the same shape — a **name, flag, or tag claiming more than the code delivered** (a CV that didn't purge, a gate that graded stubs, tags predating their deliverables, a "harmless" caveat that wasn't). None computed a wrong answer; all were **accounting gaps between label and behavior**. These rules close that gap and bind Phases 3+.
+
+1. **Definition of Done — both must hold.**
+   - **(a) Claimed at a call site.** Every capability a function/module *name or docstring* claims is **invoked at a real call site** (cite `file:line` of the call), not merely defined. A primitive that exists but nothing calls is **not done** (the orphaned-`PurgedKFold` / un-wired-purge failure mode).
+   - **(b) Certified against real machinery.** The certifying test feeds **real machinery-computed inputs** — never stubs, sentinels, or hand-assembled scalars. **Required property: the certifying test must fail if the underlying machinery is removed.** A test that would still pass with the machinery deleted certifies nothing (the gate2-stub failure mode).
+2. **Names and docstrings are claims; they must be true at HEAD.** If a name asserts a property (*purged, size-aware, isolated, adaptive, shared*), the code must have it on the call path — or the name/docstring is corrected to what the code actually does. No aspirational naming.
+3. **Gate/version tags are deliverable snapshots.** The tag commit must contain the **complete** deliverables the gate claims. Tagging ahead of deliverables is prohibited (as happened with `gate-1-data` / `gate-2-harness`). If work lands post-tag, re-cut the tag, or mark it non-snapshot in `PROGRESS.md` with **HEAD named as the source of truth**.
+4. **Fail-closed is the default for every evaluator.** A gate refuses to grade (`INSUFFICIENT` / raise) on absent, sentinel, or un-provenanced input — it never grades a placeholder as real. Distribution-valued inputs arrive as **keyed machinery evidence**; the graded summary is **derived inside the gate**, so a scalar cannot masquerade as computed. Built for kill-gate criteria 1/4/6a/6d/7; **new criteria inherit it by default.**
+5. **State claims in bounded form — never rounded up.** Record exactly what is closed and what residue remains, with the residue's scope and remediation path (template: the DSR/PBO/P&L scalar-residue note). A commit message or status line broader than the code is itself an instance of the defect this section exists to prevent.
+6. **"Harmless iff X" caveats verify X before X is relied on.** If a bound is checkable from data or config *now*, check it before the phase that depends on it opens — do not defer to "confirmed at first real run" (the square-off ≤ 15:20 assumption, which was false and checkable from the data manifest).
+7. **Every "done" claim carries call-site evidence** — `file:line` of the **call**, not the definition — here and in `PROGRESS.md`. Reviews reject "done" without it.
+
+### PR-review checklist — apply to every change (not aspirational)
+- [ ] **Claim-at-call-site (DoD-a):** every capability a name/docstring claims is invoked at a real call site — `file:line` cited, not merely defined.
+- [ ] **Machinery-not-stub (DoD-b):** the certifying test uses real computed inputs and **fails if the machinery is removed**.
+- [ ] **Names true at HEAD (rule 2):** no name/docstring asserts a property the call path lacks.
+- [ ] **Tag = snapshot (rule 3):** if this closes a gate, the tag commit holds the full deliverables (else re-cut / mark non-snapshot, HEAD as source of truth).
+- [ ] **Fail-closed (rule 4):** any new or extended evaluator refuses sentinel / absent / un-provenanced input.
+- [ ] **Bounded claims (rule 5):** the PR body and commit state exactly what's closed and the residue — nothing rounded up.
+- [ ] **Caveat-verified (rule 6):** any "harmless iff X" caveat has X checked from data/config, not deferred to first run.
+- [ ] **Call-site evidence (rule 7):** every "done" item cites `file:line` of the call.
+
 ## Project-Specific Inviolable Rules
 These override convenience and "just make it work."
 
