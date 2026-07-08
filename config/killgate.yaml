@@ -35,3 +35,13 @@ regime:
   median_path_sharpe_min_every_bucket: 0.0   # > 0 in EVERY bucket
   median_path_sharpe_majority_min: 0.5       # > 0.5 in a majority of buckets
   require_positive_without_best_bucket: true # net-positive with the single best bucket removed
+
+# Stub guard (Phase-3 readiness B-1): STRUCTURAL evidence floors, never value
+# thresholds. The gate returns INSUFFICIENT (not PASS/KILL) when a criterion's
+# input arrives under-shaped — a stub rather than a genuinely computed value.
+# Kept permissive: the guard only rejects stubs; criterion 7's own ">0 in every
+# bucket" enforces statistical adequacy, so these must not do its job.
+evidence:
+  min_regime_buckets: 4    # criterion 7 needs >= this many distinct populated regime buckets
+  min_cross_symbols: 3     # criterion 6d needs >= this many distinct held-out symbols
+  min_cpcv_paths: 8        # criteria 1/4 need >= this many FINITE (post-purge) CPCV paths

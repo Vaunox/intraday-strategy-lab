@@ -9,8 +9,9 @@ of reconstructed paths is ``phi = C(N,k)·k/N``.
 **Purging & embargo.** Each combination's pooled test trades are purged of any
 observation whose label window overlaps a *train* group's span, and a further
 embargo buffer (default one trading day) is applied at the test/train boundary —
-both via the single shared :func:`~lab.research.validation.splitter.label_overlaps`
-primitive, so CPCV and the purged k-fold splitter cannot drift apart. For a single
+both via the single shared :func:`~lab.research.validation.splitter.purge_indices`
+primitive (also used by the purged k-fold splitter and CSCV/PBO), so their purge
+semantics cannot drift apart. For a single
 symbol whose intraday positions square off within the session, trades are
 sequential and rarely overlap, so the embargo buffer is the active guard, thinning
 the pool near boundaries; with concurrent/overlapping labels the overlap purge also
@@ -31,7 +32,38 @@ import numpy as np
 import numpy.typing as npt
 
 from lab.research.validation.sharpe import annualized_sharpe
-from lab.research.validation.splitter import ONE_TRADING_DAY, label_overlaps
+from lab.research.validation.splitter import ONE_TRADING_DAY, purge_indices
+
+
+@dataclass(frozen=True, slots=True)
+class CPCVDistribution:
+    """Summary of a CPCV path-Sharpe distribution over its FINITE (scorable) paths."""
+
+    n_finite_paths: int
+    median_path_sharpe: float
+    positive_fraction: float
+    tenth_percentile: float
+
+
+def cpcv_distribution_summary(path_sharpes: Sequence[float]) -> CPCVDistribution:
+    """Summarize a CPCV path-Sharpe distribution over its FINITE paths.
+
+    A purged-empty (or single-observation) combination scores ``NaN`` and is
+    excluded, so ``n_finite_paths`` and the quantiles reflect the **post-purge
+    scorable** paths. This is the single definition of the criterion-1/4 view,
+    shared by :class:`CPCVResult` and the kill-gate so the graded summary is
+    provably the distribution's — not a separately-computed (drift-able) scalar.
+    """
+    arr = np.asarray(path_sharpes, dtype=np.float64)
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return CPCVDistribution(0, float("nan"), float("nan"), float("nan"))
+    return CPCVDistribution(
+        n_finite_paths=int(finite.size),
+        median_path_sharpe=float(np.median(finite)),
+        positive_fraction=float(np.mean(finite > 0.0)),
+        tenth_percentile=float(np.percentile(finite, 10)),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,32 +75,30 @@ class CPCVResult:
     k_test_groups: int
     n_paths: float  # phi = C(N,k)·k/N
 
-    def _finite(self) -> np.ndarray:
-        arr = np.array(self.path_sharpes, dtype=np.float64)
-        return arr[np.isfinite(arr)]
+    @property
+    def summary(self) -> CPCVDistribution:
+        """The finite-path summary, shared with the kill-gate (criteria 1 & 4)."""
+        return cpcv_distribution_summary(self.path_sharpes)
 
     @property
     def n_finite_paths(self) -> int:
         """Number of combinations that retained a scorable pool after purging."""
-        return int(self._finite().size)
+        return self.summary.n_finite_paths
 
     @property
     def median_path_sharpe(self) -> float:
         """Median across finite path-Sharpes (kill-gate criterion 1)."""
-        finite = self._finite()
-        return float(np.median(finite)) if finite.size else float("nan")
+        return self.summary.median_path_sharpe
 
     @property
     def positive_fraction(self) -> float:
         """Fraction of finite paths with a positive Sharpe (criterion 4a)."""
-        finite = self._finite()
-        return float(np.mean(finite > 0.0)) if finite.size else float("nan")
+        return self.summary.positive_fraction
 
     @property
     def tenth_percentile(self) -> float:
         """10th-percentile path-Sharpe (criterion 4b)."""
-        finite = self._finite()
-        return float(np.percentile(finite, 10)) if finite.size else float("nan")
+        return self.summary.tenth_percentile
 
 
 def _group_span(
@@ -122,17 +152,13 @@ def combinatorial_purged_cv(
             for g in range(n_groups)
             if g not in combo_set
         ]
-        kept = [
-            int(i)
-            for g in combo
-            for i in groups[g]
-            if not any(
-                label_overlaps(
-                    entry_times[int(i)], exit_times[int(i)], start - embargo, end + embargo
-                )
-                for start, end in train_spans
-            )
-        ]
+        kept = purge_indices(
+            (int(i) for g in combo for i in groups[g]),
+            entry_times,
+            exit_times,
+            train_spans,
+            embargo=embargo,
+        )
         pooled = values[np.array(kept, dtype=np.int64)] if kept else np.empty(0, dtype=np.float64)
         path_sharpes.append(annualized_sharpe(pooled, periods_per_year))
     n_paths = math.comb(n_groups, k_test_groups) * k_test_groups / n_groups

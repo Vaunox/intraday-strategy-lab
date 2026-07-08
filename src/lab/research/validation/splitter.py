@@ -13,7 +13,7 @@ entry, label realized at exit). Observations are assumed time-ordered.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -33,6 +33,32 @@ def label_overlaps(
     apply an embargo, pass a span already widened by the embargo on both ends.
     """
     return entry <= span_end and exit_ >= span_start
+
+
+def purge_indices(
+    candidate_idx: Iterable[int],
+    entry_times: Sequence[datetime],
+    exit_times: Sequence[datetime],
+    exclude_spans: Iterable[tuple[datetime, datetime]],
+    *,
+    embargo: timedelta,
+) -> list[int]:
+    """Return the candidate observations whose label window survives purging.
+
+    A candidate index is kept unless its ``[entry, exit]`` window overlaps any
+    ``exclude_span`` widened by ``embargo`` on both ends. This is the single purge
+    primitive shared by the purged k-fold splitter, CPCV, and CSCV/PBO, so their
+    purge/embargo semantics cannot drift (Part III Layer 2) — the one place the
+    overlap rule lives.
+    """
+    widened = [(start - embargo, end + embargo) for start, end in exclude_spans]
+    return [
+        int(i)
+        for i in candidate_idx
+        if not any(
+            label_overlaps(entry_times[int(i)], exit_times[int(i)], lo, hi) for lo, hi in widened
+        )
+    ]
 
 
 @dataclass(frozen=True, slots=True)

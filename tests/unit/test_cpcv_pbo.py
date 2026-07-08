@@ -141,22 +141,56 @@ def test_cpcv_embargo_purges_boundary_trades() -> None:
 
 
 # --- PBO -------------------------------------------------------------------- #
+def _daily_times(n: int) -> tuple[list[datetime], list[datetime]]:
+    """One point-interval per row on consecutive days (rows are time-ordered)."""
+    days = [datetime(2024, 1, 1, tzinfo=IST) + timedelta(days=i) for i in range(n)]
+    return days, list(days)
+
+
 def test_pbo_low_for_persistently_best_config() -> None:
     rng = np.random.default_rng(3)
     strong = rng.normal(0.02, 0.01, size=(240, 1))  # config 0: real, persistent edge
     noise = rng.normal(0.0, 0.01, size=(240, 4))
     matrix = np.hstack([strong, noise])
-    result = probability_of_backtest_overfitting(matrix, n_splits=8)
+    entries, exits = _daily_times(240)
+    result = probability_of_backtest_overfitting(
+        matrix, entries, exits, n_splits=8, embargo=timedelta(0)
+    )
     assert result.pbo < 0.2  # the IS-best (config 0) stays best OOS -> not overfit
 
 
 def test_pbo_high_for_pure_noise_configs() -> None:
     rng = np.random.default_rng(4)
     matrix = rng.normal(0.0, 0.01, size=(240, 6))  # no config has a real edge
-    result = probability_of_backtest_overfitting(matrix, n_splits=8)
+    entries, exits = _daily_times(240)
+    result = probability_of_backtest_overfitting(
+        matrix, entries, exits, n_splits=8, embargo=timedelta(0)
+    )
     assert result.pbo > 0.35  # chasing the IS-best buys ~nothing OOS
 
 
+def test_pbo_embargo_purges_boundary_rows() -> None:
+    # A 1-day embargo purges OOS rows adjacent to an IS block, via the SAME shared
+    # primitive CPCV uses — so the CSCV logit distribution shifts vs no embargo.
+    rng = np.random.default_rng(9)
+    matrix = rng.normal(0.0, 0.01, size=(240, 4))
+    entries, exits = _daily_times(240)
+    plain = probability_of_backtest_overfitting(
+        matrix, entries, exits, n_splits=8, embargo=timedelta(0)
+    )
+    embargoed = probability_of_backtest_overfitting(
+        matrix, entries, exits, n_splits=8, embargo=timedelta(days=1)
+    )
+    assert not np.array_equal(plain.logits, embargoed.logits)  # the embargo actually purged
+
+
 def test_pbo_requires_multiple_configs() -> None:
+    entries, exits = _daily_times(100)
     with pytest.raises(ValueError, match="at least 2 config"):
-        probability_of_backtest_overfitting(np.zeros((100, 1)))
+        probability_of_backtest_overfitting(np.zeros((100, 1)), entries, exits)
+
+
+def test_pbo_rejects_mismatched_row_times() -> None:
+    entries, exits = _daily_times(10)
+    with pytest.raises(ValueError, match="one entry per matrix row"):
+        probability_of_backtest_overfitting(np.zeros((240, 4)), entries, exits, n_splits=8)
