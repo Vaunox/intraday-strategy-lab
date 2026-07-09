@@ -156,6 +156,17 @@ Across the first 6 catalog studies (P3.1–P3.6, all KILL, all 0/10 symbols posi
 
 **Refinement (P3.7, 2026-07-09) — the gradient sharpens.** The P3.7 slope variant — the *cleanest/fastest* trend follower, nearest this gradient's pointed direction — died **cost-dead on turnover** (30,518 trades, gross 0.122% < 0.182% cost), NOT on direction. This *sharpens* the gradient rather than contradicting it: **if an edge exists it is long-horizon continuation, AND a *fast* adaptive trend signal cannot capture it because turnover eats it first.** The conditional read for the small-cap / own-strategy follow-up tightens to: **long-horizon continuation with LOW turnover** — a fast trend flip is the wrong instrument even in the pointed direction.
 
+**Corrected turnover-ordered gradient (aggregate CPCV median; the driver is TURNOVER/speed, not "horizon" per se):**
+
+| Continuation bet | Turnover (RELIANCE trades) | Aggregate CPCV |
+|---|---|---|
+| Donchian (55-bar global) | 3,298 (slowest) | **−6.13** (least bad) |
+| breakout (20-bar intraday) | ~fast | −8.75 |
+| adaptive-MA cross (KAMA 10/30) | 7,642 | −12.95 |
+| adaptive-MA slope (KAMA 10) | 30,518 (fastest) | **cost-dead** |
+
+Monotonic in turnover: **lower-turnover = less bad; faster = worse; fastest = cost-dead.** Correction note (2026-07-09): an earlier framing mis-placed the adaptive-MA cross as a *least-bad, longest-horizon* point (~−4.68) — wrong on the number (it is −12.95) and the direction (the KAMA 10/30 cross is *faster* than the 55-bar Donchian, so it lands *worse*, not better). It does **not** extend a monotonic improvement; the gradient lives in the speed dimension, and the least-dead continuation bet is **Donchian (−6.13)**, not the adaptive-MA cross.
+
 ---
 
 ## Open decisions / surfaced ambiguities
