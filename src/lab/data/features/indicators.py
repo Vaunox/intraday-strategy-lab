@@ -104,8 +104,37 @@ def percent_b(data: OHLCV, period: int, num_std: float) -> FloatArray:
 
 # --- hand-rolled channels / volume / volatility ----------------------------- #
 def donchian(data: OHLCV, period: int) -> tuple[FloatArray, FloatArray]:
-    """Donchian channel: rolling N-bar high and low."""
+    """Donchian channel: rolling N-bar high and low (global window, may cross days)."""
     return _rolling(data.high, period, use_max=True), _rolling(data.low, period, use_max=False)
+
+
+def intraday_donchian(data: OHLCV, period: int) -> tuple[FloatArray, FloatArray]:
+    """Prior N-bar Donchian high/low over CURRENT-DAY bars only (resets each IST day).
+
+    ``out[i]`` is the max-high / min-low over the prior ``period`` bars that share bar
+    ``i``'s IST trading date -- window ``[max(day_start_i, i - period) .. i - 1]``,
+    EXCLUDING bar ``i`` -- so an intraday breakout is measured against TODAY's range, never
+    a level carried across the overnight gap. The first bar of each day is ``NaN`` (no
+    prior intraday bar defines a range). Strictly causal; the value at bar ``i`` uses only
+    bars ``0..i-1`` of the same day.
+
+    Distinct from :func:`donchian` (a global rolling window that crosses days) AND from an
+    expanding day-range: it keeps the N-bar-range concept, so a prior-N-bar-range breakout
+    (P3.2) stays a different strategy from an Opening-Range Breakout (P3.11), which trades
+    the day's running high/low. Both indicators are kept; callers choose.
+    """
+    high, low = data.high, data.low
+    n = len(high)
+    upper, lower = _empty(n), _empty(n)
+    day_start = 0
+    for i in range(n):
+        if i > 0 and data.timestamps[i].date() != data.timestamps[i - 1].date():
+            day_start = i  # reset the window at the IST trading-date boundary
+        window_start = max(day_start, i - period)
+        if window_start < i:  # at least one prior intraday bar defines the range
+            upper[i] = float(np.max(high[window_start:i]))
+            lower[i] = float(np.min(low[window_start:i]))
+    return upper, lower
 
 
 def relative_volume(data: OHLCV, period: int) -> FloatArray:
