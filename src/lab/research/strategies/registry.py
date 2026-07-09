@@ -17,6 +17,7 @@ from lab.core.interfaces import StrategySpec
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
+from lab.research.strategies.reversal import reversal_spec
 from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
 
 SpecFactory = Callable[[Mapping[str, float]], StrategySpec]
@@ -58,5 +59,10 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=mean_reversion_spec,
         base_params={"entry_z": 2.0, "exit_z": 0.5, "lookback": 20.0},
         param_steps={"entry_z": 0.5, "exit_z": 0.25},
+    ),
+    "reversal": StrategyEntry(  # P3.4 -- swing-failure (failed-breakout) fade; blind params
+        factory=reversal_spec,
+        base_params={"swing_lookback": 20.0, "break_buffer": 0.001},
+        param_steps={"swing_lookback": 5.0, "break_buffer": 0.0005},
     ),
 }

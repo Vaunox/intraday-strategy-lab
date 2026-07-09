@@ -9,6 +9,7 @@ from __future__ import annotations
 from lab.research.strategies.breakout import BreakoutSpec
 from lab.research.strategies.mean_reversion import MeanReversionSpec
 from lab.research.strategies.registry import STRATEGIES
+from lab.research.strategies.reversal import ReversalSpec
 from lab.research.strategies.vwap import VwapCrossSpec
 
 
@@ -49,6 +50,17 @@ def test_mean_reversion_registered_with_frozen_prereg_params() -> None:
     assert isinstance(spec, MeanReversionSpec)  # factory built the right spec
     assert spec.name == "mean_reversion"
     assert spec.entry_z == 2.0 and spec.exit_z == 0.5 and spec.lookback == 20
+
+
+def test_reversal_registered_with_frozen_prereg_params() -> None:
+    # P3.4: swing-failure (failed-breakout) fade -- swing_lookback 20 (±5), break_buffer 0.001.
+    entry = STRATEGIES["reversal"]
+    assert entry.base_params == {"swing_lookback": 20.0, "break_buffer": 0.001}
+    assert entry.param_steps == {"swing_lookback": 5.0, "break_buffer": 0.0005}
+    spec = entry.factory(entry.base_params)
+    assert isinstance(spec, ReversalSpec)  # factory built the right spec
+    assert spec.name == "reversal"
+    assert spec.swing_lookback == 20 and spec.break_buffer == 0.001
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:
