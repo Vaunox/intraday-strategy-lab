@@ -468,6 +468,29 @@ def camarilla_pivot_levels(data: OHLCV) -> tuple[FloatArray, FloatArray]:
     return out_r1, out_s1
 
 
+def classic_pivot_levels(data: OHLCV) -> tuple[FloatArray, FloatArray]:
+    """Classic pivot R1/S1 from the prior day's HLC (point-in-time).
+
+    ``R1 = 2P - prevLow``, ``S1 = 2P - prevHigh`` where ``P = (prevH + prevL + prevC) / 3`` --
+    the classic support/resistance levels, constant within a day and known at the open
+    (prior day complete), first day NaN. Reuses the same prior-completed-day lookup as
+    :func:`pivot` / :func:`fibonacci_pivot_levels` / :func:`camarilla_pivot_levels`, so it
+    is causal by construction: it reads only the PRIOR day's HLC, never the current day's,
+    so there is no same-day leak.
+    """
+    out_r1 = _empty(len(data))
+    out_s1 = _empty(len(data))
+    daily, prior_by_date = _prior_day_lookup(data)
+    for i, ts in enumerate(data.timestamps):
+        prior = prior_by_date.get(ts.date())
+        if prior is not None:
+            high, low, close = daily[prior]
+            pivot_point = (high + low + close) / 3.0
+            out_r1[i] = 2.0 * pivot_point - low
+            out_s1[i] = 2.0 * pivot_point - high
+    return out_r1, out_s1
+
+
 def cross_sectional_rank(values_by_symbol: dict[str, FloatArray]) -> dict[str, FloatArray]:
     """Point-in-time cross-sectional rank of each symbol at each timestamp.
 
