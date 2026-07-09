@@ -143,6 +143,17 @@ Three mechanical, **outside-the-gate** fixes before the first real catalog study
 
 ---
 
+## Cross-study observation — the continuation gradient (Phase-5 synthesis note, 2026-07-09)
+
+Across the first 6 catalog studies (P3.1–P3.6, all KILL, all 0/10 symbols positive), a real **directional sub-pattern** emerges. Logged here for the Phase-5 synthesis — held **conditional**, NOT as "getting warmer toward a pass."
+
+- **Continuation bets improve monotonically toward "least bad" as the breakout level lengthens / becomes more significant:** P3.2 intraday breakout (aggregate CPCV −8.75, PF 0.23) → P3.6 global multi-session Donchian (−6.13, PF 0.33, the least-bad of all 7 runs). **Fades stay worst** (P3.1 V1 −18.8, P3.3 −27.0).
+- **Read (conditional):** the *direction* of least-bad-ness is informative — if any edge ever appears on this universe, it is likeliest a **long-horizon continuation** bet. A conditional signal for the **small-cap / own-strategy roadmap** (where such edges are classically strongest), NOT this large-cap universe.
+- **Honest confound — do NOT over-read:** longer-horizon strategies also **trade less and pay less cost**, so part of "less bad" may be **cost, not information** — both push the same way, and this data cannot fully separate them.
+- **Bottom line:** *the direction of least-bad-ness is informative; the magnitude is still firmly dead.* Every run is 0/10 positive with negative net expectancy — nothing is close to a pass. This is **not** evidence of approaching an edge.
+
+---
+
 ## Open decisions / surfaced ambiguities
 
 *Per Inviolable Rule 8: when Part III is genuinely silent or self-contradictory on a decision, STOP and log it here with the options considered and the resolution. Nothing in Phase 0 was genuinely blocking; the decisions below were resolved within the Part I ground rules and Part III, and are recorded here for transparency.*
