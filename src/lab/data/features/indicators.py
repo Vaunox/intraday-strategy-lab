@@ -172,6 +172,30 @@ def intraday_zscore(data: OHLCV, period: int) -> FloatArray:
     return out
 
 
+def prior_donchian(data: OHLCV, period: int) -> tuple[FloatArray, FloatArray]:
+    """Prior N-bar Donchian high/low EXCLUDING the current bar (GLOBAL; crosses days).
+
+    ``out[i]`` = max high / min low over bars ``[i - period .. i - 1]`` -- the ``period`` bars
+    BEFORE bar ``i`` -- so ``close[i] > upper[i]`` is a genuine breakout of the prior N-bar
+    high. GLOBAL: the window does NOT reset at the day boundary, so an early-session bar
+    references the PRIOR session's extreme (a multi-session level) -- deliberately distinct
+    from :func:`intraday_donchian` (day-reset) and from :func:`donchian` (which INCLUDES the
+    current bar). ``NaN`` until ``period`` prior bars exist. Strictly causal: the value at bar
+    ``i`` uses only bars ``0..i-1``, so it is prefix-invariant (the no-lookahead contract).
+    """
+    high, low = data.high, data.low
+    n = len(high)
+    upper, lower = _empty(n), _empty(n)
+    if n > period:
+        # sliding window w[k] covers bars [k .. k+period-1]; out[i] over [i-period .. i-1]
+        # is the window starting at i-period, i.e. w[i-period] for i in [period, n-1].
+        high_windows = sliding_window_view(high, period)[: n - period]
+        low_windows = sliding_window_view(low, period)[: n - period]
+        upper[period:] = high_windows.max(axis=1)
+        lower[period:] = low_windows.min(axis=1)
+    return upper, lower
+
+
 def relative_volume(data: OHLCV, period: int) -> FloatArray:
     """Volume divided by the mean of the prior ``period`` volumes (excludes current)."""
     out = _empty(len(data))
