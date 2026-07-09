@@ -39,6 +39,7 @@ from lab.data.store.parquet_archive import ParquetArchive
 from lab.research.reports.killgate import load_kill_gate_thresholds
 from lab.research.reports.paper import append_study_section
 from lab.research.reports.report import render_report
+from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.vwap import vwap_mean_reversion_spec
 from lab.research.study import SpecFactory, run_study
@@ -74,6 +75,11 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=vwap_mean_reversion_spec,
         base_params={"entry_threshold": 0.004, "exit_threshold": 0.001},
         param_steps={"entry_threshold": 0.001, "exit_threshold": 0.0005},
+    ),
+    "breakout": StrategyEntry(
+        factory=breakout_spec,
+        base_params={"breakout_lookback": 20.0, "volume_mult": 1.5},
+        param_steps={"breakout_lookback": 5.0, "volume_mult": 0.25},
     ),
 }
 
