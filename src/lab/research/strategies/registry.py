@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from lab.core.interfaces import StrategySpec
+from lab.research.strategies.adaptive_ma import adaptive_ma_cross_spec, adaptive_ma_slope_spec
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.donchian_breakout import donchian_breakout_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
@@ -76,5 +77,15 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=donchian_breakout_spec,
         base_params={"channel_lookback": 55.0},
         param_steps={"channel_lookback": 10.0},
+    ),
+    "adaptive_ma_cross": StrategyEntry(  # P3.7 V1 -- fast/slow KAMA cross; blind
+        factory=adaptive_ma_cross_spec,
+        base_params={"fast_period": 10.0, "slow_period": 30.0},
+        param_steps={"fast_period": 5.0, "slow_period": 10.0},
+    ),
+    "adaptive_ma_slope": StrategyEntry(  # P3.7 V2 -- KAMA slope (trend-state signal); blind
+        factory=adaptive_ma_slope_spec,
+        base_params={"kama_period": 10.0},
+        param_steps={"kama_period": 5.0},
     ),
 }
