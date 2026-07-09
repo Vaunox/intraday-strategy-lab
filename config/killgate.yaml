@@ -45,3 +45,10 @@ evidence:
   min_regime_buckets: 4    # criterion 7 needs >= this many distinct populated regime buckets
   min_cross_symbols: 3     # criterion 6d needs >= this many distinct held-out symbols
   min_cpcv_paths: 8        # criteria 1/4 need >= this many FINITE (post-purge) CPCV paths
+  min_base_observations: 30  # a study's base config needs >= this many trades to be certified;
+                             # below it the realized-frequency Sharpe (len(trades)/span) and the
+                             # CPCV path distribution are dominated by a handful of possibly-lucky
+                             # trades -> INSUFFICIENT, never graded. Far below any genuinely-trading
+                             # strategy over the multi-year span (even one trade/week ~ 570 trades),
+                             # so it rejects only degenerate configs; it also turns CPCV's "need
+                             # >= n_groups observations" from a crash into a clean refusal.

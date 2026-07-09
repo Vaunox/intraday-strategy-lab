@@ -1,10 +1,18 @@
-"""Fixed Sharpe convention and return statistics (Phase 2, Part III Layer 2).
+"""Sharpe convention (realized frequency) and return statistics (Phase 2, Part III Layer 2).
 
-A bare "Sharpe" is meaningless intraday, so the convention is pinned in config
-and applied identically to every study: Sharpes are annualized by
-sqrt(``periods_per_year``) and scaled on **in-market** (position-held) periods,
-not calendar time. The per-period Sharpe, sample length, skew, and kurtosis feed
-the Probabilistic/Deflated Sharpe math in :mod:`lab.research.validation.metrics`.
+A bare "Sharpe" is meaningless intraday, so the annualization convention is pinned and
+applied identically to every study: a series' per-period Sharpe is annualized by
+``sqrt(`` its REALIZED per-year frequency ``)`` — the number of return observations the
+strategy ACTUALLY produced over its operating span (:func:`realized_periods_per_year`),
+not a fixed calendar constant. This REPLACES the earlier fixed ``periods_per_year = 18750``
+(all 5-min bars in a year), which silently over-annualized every strategy that did not
+trade on ~every bar: a few-hundred-trades-a-year strategy was scaled as though it traded
+~18750 times a year, inflating the Sharpe-magnitude kill-gate criteria (1/4/6a/7). That was
+code-vs-blueprint drift — the blueprint's convention scales on **in-market (position-held)
+events, not calendar time**. The per-period Sharpe, sample length, skew, and kurtosis feed
+the Probabilistic/Deflated Sharpe math in :mod:`lab.research.validation.metrics`, which
+consumes the NON-annualized per-period Sharpe (annualization is only the reporting scale on
+the kill-gate's Sharpe criteria).
 """
 
 from __future__ import annotations
@@ -17,31 +25,23 @@ import numpy as np
 import numpy.typing as npt
 from scipy import stats
 
-from lab.core.config import Settings
-
 FloatArray = npt.NDArray[np.float64]
 Returns = Sequence[float] | FloatArray
 
 
-@dataclass(frozen=True, slots=True)
-class SharpeConvention:
-    """The pinned Sharpe convention: annualization factor and scaling basis."""
+def realized_periods_per_year(n_obs: int, span_years: float) -> float:
+    """Return the REALIZED annualization frequency: return observations per year.
 
-    periods_per_year: float
-    basis: str = "in_market"
-
-    @classmethod
-    def from_settings(cls, settings: Settings) -> SharpeConvention:
-        """Load the convention from the ``sharpe`` config section."""
-        raw = settings.raw.get("sharpe", {})
-        return cls(
-            periods_per_year=float(raw["periods_per_year"]),
-            basis=str(raw.get("basis", "in_market")),
-        )
-
-    def annualize(self, per_period_sharpe: float) -> float:
-        """Annualize a per-period Sharpe by sqrt(periods_per_year)."""
-        return per_period_sharpe * math.sqrt(self.periods_per_year)
+    The Sharpe annualization factor is ``sqrt(realized_periods_per_year)``. Unlike a
+    fixed calendar constant, this reflects how often the strategy ACTUALLY produced a
+    return — ``n_obs`` trade returns over ``span_years`` of operation — so a strategy
+    trading a few hundred times a year is annualized by ``sqrt(hundreds)``, never
+    ``sqrt(all 5-min bars)``. Returns NaN for a degenerate span or empty series, so the
+    dependent annualized Sharpe (and its kill-gate criterion) fails closed.
+    """
+    if span_years <= 0.0 or n_obs < 1:
+        return float("nan")
+    return n_obs / span_years
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +66,12 @@ def per_period_sharpe(returns: Returns) -> float:
 
 
 def annualized_sharpe(returns: Returns, periods_per_year: float) -> float:
-    """Return the annualized Sharpe under the fixed convention."""
+    """Annualize a per-period Sharpe by ``sqrt(periods_per_year)``.
+
+    ``periods_per_year`` is the series' REALIZED frequency from
+    :func:`realized_periods_per_year` (observations per operating year), not a fixed
+    calendar constant — see the module docstring.
+    """
     return per_period_sharpe(returns) * math.sqrt(periods_per_year)
 
 

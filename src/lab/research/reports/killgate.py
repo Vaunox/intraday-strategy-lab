@@ -60,6 +60,7 @@ class KillGateThresholds:
     min_regime_buckets: int
     min_cross_symbols: int
     min_cpcv_paths: int
+    min_base_observations: int
 
     @classmethod
     def from_mapping(cls, mapping: dict[str, Any]) -> KillGateThresholds:
@@ -90,6 +91,7 @@ class KillGateThresholds:
             min_regime_buckets=int(evidence["min_regime_buckets"]),
             min_cross_symbols=int(evidence["min_cross_symbols"]),
             min_cpcv_paths=int(evidence["min_cpcv_paths"]),
+            min_base_observations=int(evidence["min_base_observations"]),
         )
 
 

@@ -44,7 +44,6 @@ from lab.research.strategies.vwap import vwap_mean_reversion_spec
 from lab.research.study import SpecFactory, run_study
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.costs import load_cost_model
-from lab.research.validation.sharpe import SharpeConvention
 
 
 @dataclass(frozen=True)
@@ -124,7 +123,6 @@ def main(argv: list[str] | None = None) -> None:
 
     cost_model = load_cost_model(config_dir)
     thresholds = load_kill_gate_thresholds(config_dir)
-    periods_per_year = SharpeConvention.from_settings(settings).periods_per_year
 
     tz = ZoneInfo(INDIA_TZ)
     interval = BarInterval(args.interval)
@@ -175,7 +173,6 @@ def main(argv: list[str] | None = None) -> None:
         cost_model,
         thresholds,
         ledger,
-        periods_per_year=periods_per_year,
         spec_factory=entry.factory,
         base_params=entry.base_params,
         param_steps=entry.param_steps,

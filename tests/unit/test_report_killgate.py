@@ -33,7 +33,6 @@ from lab.research.validation.cpcv import CPCVResult, cpcv_distribution_summary
 
 REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
 IST = ZoneInfo("Asia/Kolkata")
-PERIODS = 18750.0
 NO_EMBARGO = timedelta(0)
 THRESH = load_kill_gate_thresholds(REPO_CONFIG)
 
@@ -224,7 +223,6 @@ def test_gate2_end_to_end_reference_spec_through_run_study(tmp_path: Path) -> No
         costs,
         THRESH,
         ledger,
-        periods_per_year=PERIODS,
         cross_symbol_candles=cross,
         cpcv_embargo=NO_EMBARGO,
         # 4 day-buckets from the 4-day series -> satisfies the regime evidence floor.

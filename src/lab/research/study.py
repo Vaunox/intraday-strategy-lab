@@ -25,6 +25,7 @@ from lab.core.constants import INDIA_TZ
 from lab.core.interfaces import StrategySpec
 from lab.core.types import Candle, Verdict
 from lab.research.reports.killgate import (
+    Criterion,
     KillGateInputs,
     KillGateResult,
     KillGateThresholds,
@@ -35,7 +36,7 @@ from lab.research.strategies.adapter import run_strategy, signals_to_targets
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.backtester import BacktestResult, Trade, run_backtest
 from lab.research.validation.costs import CostModel
-from lab.research.validation.cpcv import combinatorial_purged_cv
+from lab.research.validation.cpcv import CPCVResult, combinatorial_purged_cv
 from lab.research.validation.pbo import probability_of_backtest_overfitting
 from lab.research.validation.robustness import (
     fraction_positive,
@@ -44,7 +45,11 @@ from lab.research.validation.robustness import (
     two_engines_agree,
     vectorized_backtest,
 )
-from lab.research.validation.sharpe import annualized_sharpe, return_stats
+from lab.research.validation.sharpe import (
+    annualized_sharpe,
+    realized_periods_per_year,
+    return_stats,
+)
 from lab.research.validation.splitter import ONE_TRADING_DAY
 
 #: A factory turning a parameter mapping into a concrete spec (studies with tunable
@@ -397,6 +402,21 @@ def regime_bucket_stats(
     return bucket_sharpes, positive_without_best
 
 
+def _operating_span_years(candles: Sequence[Candle]) -> float:
+    """Operating span of the study window in years (first to last candle timestamp).
+
+    The denominator of the realized annualization frequency: trades-per-year =
+    ``len(trades) / _operating_span_years(candles)``. Returns NaN for a degenerate
+    window (< 2 candles or non-positive span) so the annualized Sharpe fails closed.
+    """
+    if len(candles) < 2:
+        return float("nan")
+    seconds = (candles[-1].timestamp - candles[0].timestamp).total_seconds()
+    if seconds <= 0.0:
+        return float("nan")
+    return seconds / (365.25 * 24.0 * 3600.0)
+
+
 # --- the orchestrator ------------------------------------------------------- #
 def run_study(
     spec: StrategySpec,
@@ -405,7 +425,6 @@ def run_study(
     thresholds: KillGateThresholds,
     ledger: TrialLedger,
     *,
-    periods_per_year: float,
     n_groups: int = 6,
     k_test_groups: int = 2,
     cpcv_embargo: timedelta = ONE_TRADING_DAY,
@@ -429,6 +448,10 @@ def run_study(
     parameter-sensitivity leg, the PBO configuration matrix, and the ledger's
     effective-trial deflation of the DSR.
 
+    Every annualized Sharpe uses the strategy's REALIZED frequency — its actual trades
+    per operating year (:func:`~lab.research.validation.sharpe.realized_periods_per_year`),
+    computed here from the base backtest — never a fixed calendar constant.
+
     ``square_off`` is the configured MIS cutoff (``calendar.session.square_off``,
     e.g. 15:20); it flows to every backtest so no leg holds past the real cutoff
     when the bar grid runs later (Kite 5-min bars reach 15:25). Pass it for real
@@ -449,8 +472,41 @@ def run_study(
     )
     trades = result.trades
     net = result.net_returns
+    # Realized annualization frequency: the strategy's ACTUAL trades per operating year,
+    # not a fixed calendar constant. One per-study frequency (from the base config) is
+    # threaded to every Sharpe below — EXACT for the base series and its CPCV-path and
+    # regime-bucket SUBSETS (which occur at this same trade rate), and the sign-based
+    # robustness legs (noise, cross-symbol) are scale-invariant.
+    periods_per_year = realized_periods_per_year(len(trades), _operating_span_years(candles))
     stats = trade_statistics(trades)
     equity = equity_curve(trades)
+
+    # Fail closed on a base too thin to certify. The realized-frequency annualization is
+    # data-dependent (len(trades)/span), so a handful of (possibly lucky) trades gives an
+    # unstable factor and a CPCV distribution dominated by a few observations — and CPCV
+    # cannot form fewer than n_groups observations at all. Return INSUFFICIENT (the same
+    # "could not certify" stance as the structural evidence floors), never grading a thin
+    # base or raising deep inside CPCV. No trial is logged — nothing was validly tested.
+    if len(net) < thresholds.min_base_observations:
+        thin = Criterion(
+            1,
+            "base-series evidence",
+            False,
+            f"got {len(net)} base trades (need >= {thresholds.min_base_observations}) — too few "
+            "to annualize stably or form a CPCV distribution; cannot certify",
+        )
+        return StudyReport(
+            strategy=spec.name,
+            cpcv=CPCVResult((), n_groups, k_test_groups, 0.0),
+            dsr=float("nan"),
+            pbo=float("nan"),
+            effective_trials=ledger.effective_trials(),
+            trades=stats,
+            kill_gate=KillGateResult(criteria=(thin,), verdict=Verdict.INSUFFICIENT),
+            equity=equity,
+            provisional=False,
+            provisional_note="",
+        )
 
     # Purged, embargoed CPCV path-Sharpe distribution.
     cpcv = combinatorial_purged_cv(
