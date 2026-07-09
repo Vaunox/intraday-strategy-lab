@@ -13,6 +13,10 @@ from lab.research.strategies.mean_reversion import MeanReversionSpec
 from lab.research.strategies.pivot_reversion import PivotReversionSpec
 from lab.research.strategies.registry import STRATEGIES
 from lab.research.strategies.reversal import ReversalSpec
+from lab.research.strategies.volatility_filters import (
+    VolContractionReversionSpec,
+    VolExpansionBreakoutSpec,
+)
 from lab.research.strategies.vwap import VwapCrossSpec
 
 
@@ -100,6 +104,20 @@ def test_adaptive_ma_both_variants_registered_with_frozen_prereg_params() -> Non
     assert slope.base_params == {"kama_period": 10.0} and slope.param_steps == {"kama_period": 5.0}
     assert isinstance(slope.factory(slope.base_params), AdaptiveMaSlopeSpec)
     assert slope.factory(slope.base_params).name == "adaptive_ma_slope"
+
+
+def test_volatility_filters_both_registered_with_frozen_prereg_params() -> None:
+    # P3.8 -- two INDEPENDENT studies (not a dichotomy): C1 expansion-breakout, C2 contraction.
+    c1 = STRATEGIES["vol_expansion_breakout"]
+    assert c1.base_params == {"breakout_lookback": 20.0, "atr_long": 100.0}
+    assert c1.param_steps == {"breakout_lookback": 5.0, "atr_long": 20.0}
+    assert isinstance(c1.factory(c1.base_params), VolExpansionBreakoutSpec)
+    assert c1.factory(c1.base_params).name == "vol_expansion_breakout"
+    c2 = STRATEGIES["vol_contraction_reversion"]
+    assert c2.base_params == {"entry_z": 2.0, "atr_long": 100.0}
+    assert c2.param_steps == {"entry_z": 0.5, "atr_long": 20.0}
+    assert isinstance(c2.factory(c2.base_params), VolContractionReversionSpec)
+    assert c2.factory(c2.base_params).name == "vol_contraction_reversion"
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:
