@@ -21,6 +21,10 @@ from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.reversal import reversal_spec
+from lab.research.strategies.volatility_filters import (
+    vol_contraction_reversion_spec,
+    vol_expansion_breakout_spec,
+)
 from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
 
 SpecFactory = Callable[[Mapping[str, float]], StrategySpec]
@@ -87,5 +91,15 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=adaptive_ma_slope_spec,
         base_params={"kama_period": 10.0},
         param_steps={"kama_period": 5.0},
+    ),
+    "vol_expansion_breakout": StrategyEntry(  # P3.8 C1 -- breakout gated to expanding vol
+        factory=vol_expansion_breakout_spec,
+        base_params={"breakout_lookback": 20.0, "atr_long": 100.0},
+        param_steps={"breakout_lookback": 5.0, "atr_long": 20.0},
+    ),
+    "vol_contraction_reversion": StrategyEntry(  # P3.8 C2 -- z-fade gated to contracting vol
+        factory=vol_contraction_reversion_spec,
+        base_params={"entry_z": 2.0, "atr_long": 100.0},
+        param_steps={"entry_z": 0.5, "atr_long": 20.0},
     ),
 }

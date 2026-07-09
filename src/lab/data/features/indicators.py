@@ -73,6 +73,24 @@ def atr(data: OHLCV, period: int) -> FloatArray:
     return result
 
 
+def atr_ratio(data: OHLCV, short_period: int, long_period: int) -> FloatArray:
+    """Dimensionless ATR ratio ``ATR(short) / ATR(long)`` -- a self-normalizing vol regime.
+
+    ``> 1.0`` means the recent (short-window) ATR is above the longer baseline -> volatility
+    EXPANDING; ``< 1.0`` -> CONTRACTING. Self-normalizing per symbol (each stock's own current
+    ATR over its own baseline), so it is directly comparable across the panel WITHOUT a
+    cross-sectional rank -- a ratio of 1.3 means "30% above this stock's own baseline"
+    identically for every symbol. Causal: both ATRs are Wilder averages of completed prior
+    bars (:func:`atr` / ``talib.ATR``, confirmed prefix-invariant), so the value at bar ``i``
+    uses only bars ``0..i``. ``NaN`` until the longer ATR warms up, or where ``ATR(long) == 0``.
+    """
+    short_atr = atr(data, short_period)
+    long_atr = atr(data, long_period)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out: FloatArray = np.where(long_atr > 0.0, short_atr / long_atr, np.nan)
+    return out
+
+
 def macd(
     data: OHLCV, fast: int, slow: int, signal: int
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
