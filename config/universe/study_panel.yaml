@@ -1,0 +1,54 @@
+# Frozen exploration study panel + criterion-6d held-out set (Phase 3 catalog studies).
+#
+# PRE-COMMITTED and FROZEN before any panel study runs (Lock A, 2026-07-09). This is
+# NOT a tunable knob: the panel must not change after seeing results, or a study
+# could be silently rescued by picking the names that make it pass. It is frozen the
+# same way kill-gate thresholds and per-study params are.
+#
+# Selection: median daily traded value (ADV = sum of close*volume per 5-min bar,
+# summed per day, median over 2025 = 249 trading days) from the frozen-49 backfill,
+# tiered by liquidity and spanning the spectrum -- INCLUDING the lower-liquidity tail
+# (RELIANCE-alone scoring was blind to exactly this). Exploration-grade only.
+# Verdict-grade uses the full universe (+ the 5 backfilled current members).
+# Frozen for all 14 single-factor studies.
+
+selection:
+  method: "median daily traded value (Rs); sum(close*volume) per day, median over 2025 (249 sessions)"
+  as_of: "2026-07-09"
+  source: "data/raw backfill (frozen-49, survivor-only)"
+
+# The 10-name exploration panel. Every panel study scores its verdict across THESE
+# (per-symbol-then-aggregate): the equal-weight panel-portfolio must clear the seven
+# criteria AND breadth must hold (>= 60% of these positive, median path-Sharpe > 1.0).
+panel:
+  - HDFCBANK    # ~1647 cr/day - top,    bank            (most-arbitraged; breakout's hardest test)
+  - RELIANCE    # ~1385        - top,    energy/conglom  (P3.1 continuity)
+  - ICICIBANK   # ~1226        - top,    bank
+  - TCS         # ~820         - top,    IT
+  - TATASTEEL   # ~363         - mid,    metals
+  - ULTRACEMCO  # ~272         - mid,    cement          (replaced BEL: BEL is trend-prone / breakout-favorable)
+  - TITAN       # ~251         - mid,    consumer disc.
+  - COALINDIA   # ~194         - bottom, PSU energy
+  - DRREDDY     # ~183         - bottom, pharma
+  - TATACONSUM  # ~122         - bottom, FMCG            (least liquid of the 49)
+
+# Criterion-6d held-out set: genuinely UNTOUCHED names OUTSIDE the panel. Breadth
+# (leg 2) asks "works across the tested names"; 6d asks "also works on names never
+# scored" -- a distinct, harder-to-fool check. Frozen alongside the panel.
+holdout_6d:
+  - INFY        # ~1092 - top,    IT
+  - SBIN        # ~760  - top,    bank
+  - SUNPHARMA   # ~340  - mid,    pharma
+  - ADANIPORTS  # ~253  - mid,    infra
+  - NESTLEIND   # ~134  - bottom, FMCG
+
+# REQUIRED interpretation stamp on every panel study result (operator ruling,
+# 2026-07-09). The frozen-49 are ALL large-caps (ADV Rs 122-1647 cr): this panel
+# spans a real ~10x arbitrage gradient but does NOT reach the genuinely small,
+# inefficient names where breakout / inefficiency edges are strongest in the
+# literature. Applied automatically to every panel result block.
+scope_caveat: >-
+  Scoped to NIFTY-50 large-caps (frozen-49, ADV Rs 122-1647 cr/day). A KILL here
+  means "no edge on large-caps", NOT "the strategy has no edge anywhere" -- the
+  small, inefficient names outside this universe (where such edges are classically
+  strongest) are untested.
