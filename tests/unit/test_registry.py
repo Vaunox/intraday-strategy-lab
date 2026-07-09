@@ -6,6 +6,7 @@ registered frozen params drifting away from what a study's pre-registration comm
 
 from __future__ import annotations
 
+from lab.research.strategies.adaptive_ma import AdaptiveMaCrossSpec, AdaptiveMaSlopeSpec
 from lab.research.strategies.breakout import BreakoutSpec
 from lab.research.strategies.donchian_breakout import DonchianBreakoutSpec
 from lab.research.strategies.mean_reversion import MeanReversionSpec
@@ -85,6 +86,20 @@ def test_donchian_breakout_registered_with_frozen_prereg_params() -> None:
     assert isinstance(spec, DonchianBreakoutSpec)  # factory built the right spec
     assert spec.name == "donchian_breakout"
     assert spec.channel_lookback == 55
+
+
+def test_adaptive_ma_both_variants_registered_with_frozen_prereg_params() -> None:
+    # P3.7 both-owed dichotomy -- V1 fast/slow KAMA cross (proven-divergent from V2 slope),
+    # V2 single-KAMA slope. Asymmetric params (different mechanisms).
+    cross = STRATEGIES["adaptive_ma_cross"]
+    assert cross.base_params == {"fast_period": 10.0, "slow_period": 30.0}
+    assert cross.param_steps == {"fast_period": 5.0, "slow_period": 10.0}
+    assert isinstance(cross.factory(cross.base_params), AdaptiveMaCrossSpec)
+    assert cross.factory(cross.base_params).name == "adaptive_ma_cross"
+    slope = STRATEGIES["adaptive_ma_slope"]
+    assert slope.base_params == {"kama_period": 10.0} and slope.param_steps == {"kama_period": 5.0}
+    assert isinstance(slope.factory(slope.base_params), AdaptiveMaSlopeSpec)
+    assert slope.factory(slope.base_params).name == "adaptive_ma_slope"
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:
