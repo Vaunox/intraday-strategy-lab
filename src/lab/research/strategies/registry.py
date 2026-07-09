@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
+from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.reversal import reversal_spec
 from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
@@ -64,5 +65,10 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=reversal_spec,
         base_params={"swing_lookback": 20.0, "break_buffer": 0.001},
         param_steps={"swing_lookback": 5.0, "break_buffer": 0.0005},
+    ),
+    "pivot_reversion": StrategyEntry(  # P3.5 -- classic pivot S/R reversion; blind params
+        factory=pivot_reversion_spec,
+        base_params={"entry_band": 0.001, "exit_band": 0.001},
+        param_steps={"entry_band": 0.0005, "exit_band": 0.0005},
     ),
 }

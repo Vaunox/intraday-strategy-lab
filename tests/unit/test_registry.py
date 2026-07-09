@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from lab.research.strategies.breakout import BreakoutSpec
 from lab.research.strategies.mean_reversion import MeanReversionSpec
+from lab.research.strategies.pivot_reversion import PivotReversionSpec
 from lab.research.strategies.registry import STRATEGIES
 from lab.research.strategies.reversal import ReversalSpec
 from lab.research.strategies.vwap import VwapCrossSpec
@@ -61,6 +62,17 @@ def test_reversal_registered_with_frozen_prereg_params() -> None:
     assert isinstance(spec, ReversalSpec)  # factory built the right spec
     assert spec.name == "reversal"
     assert spec.swing_lookback == 20 and spec.break_buffer == 0.001
+
+
+def test_pivot_reversion_registered_with_frozen_prereg_params() -> None:
+    # P3.5: classic pivot S/R reversion -- entry_band 0.001 (±0.0005), exit_band 0.001.
+    entry = STRATEGIES["pivot_reversion"]
+    assert entry.base_params == {"entry_band": 0.001, "exit_band": 0.001}
+    assert entry.param_steps == {"entry_band": 0.0005, "exit_band": 0.0005}
+    spec = entry.factory(entry.base_params)
+    assert isinstance(spec, PivotReversionSpec)  # factory built the right spec
+    assert spec.name == "pivot_reversion"
+    assert spec.entry_band == 0.001 and spec.exit_band == 0.001
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:
