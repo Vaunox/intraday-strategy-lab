@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from lab.research.strategies.breakout import BreakoutSpec
 from lab.research.strategies.registry import STRATEGIES
+from lab.research.strategies.vwap import VwapCrossSpec
 
 
 def test_breakout_registered_with_frozen_prereg_params() -> None:
@@ -25,6 +26,17 @@ def test_vwap_registered_with_frozen_prereg_params() -> None:
     entry = STRATEGIES["vwap_mean_reversion"]
     assert entry.base_params == {"entry_threshold": 0.004, "exit_threshold": 0.001}
     assert entry.param_steps == {"entry_threshold": 0.001, "exit_threshold": 0.0005}
+
+
+def test_vwap_cross_registered_with_frozen_prereg_params() -> None:
+    # P3.1 V2 (owed cross variant): blind cross_threshold 0.002 (+/-0.001), pre-registered.
+    entry = STRATEGIES["vwap_cross"]
+    assert entry.base_params == {"cross_threshold": 0.002}
+    assert entry.param_steps == {"cross_threshold": 0.001}
+    spec = entry.factory(entry.base_params)
+    assert isinstance(spec, VwapCrossSpec)  # narrows type + checks the factory built the right spec
+    assert spec.name == "vwap_cross"
+    assert spec.cross_threshold == 0.002
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:

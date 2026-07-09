@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
-from lab.research.strategies.vwap import vwap_mean_reversion_spec
+from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
 
 SpecFactory = Callable[[Mapping[str, float]], StrategySpec]
 
@@ -42,6 +42,11 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=vwap_mean_reversion_spec,
         base_params={"entry_threshold": 0.004, "exit_threshold": 0.001},
         param_steps={"entry_threshold": 0.001, "exit_threshold": 0.0005},
+    ),
+    "vwap_cross": StrategyEntry(  # P3.1 V2 -- owed cross variant; blind params, 5-min primary
+        factory=vwap_cross_spec,
+        base_params={"cross_threshold": 0.002},
+        param_steps={"cross_threshold": 0.001},
     ),
     "breakout": StrategyEntry(
         factory=breakout_spec,
