@@ -23,8 +23,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -39,42 +38,10 @@ from lab.data.store.parquet_archive import ParquetArchive
 from lab.research.reports.killgate import load_kill_gate_thresholds
 from lab.research.reports.paper import append_study_section
 from lab.research.reports.report import render_report
-from lab.research.strategies.reference import ReferenceMomentumSpec
-from lab.research.strategies.vwap import vwap_mean_reversion_spec
-from lab.research.study import SpecFactory, run_study
+from lab.research.strategies.registry import STRATEGIES
+from lab.research.study import run_study
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.costs import load_cost_model
-
-
-@dataclass(frozen=True)
-class StrategyEntry:
-    """A registered study: its spec factory plus the PRE-COMMITTED parameters.
-
-    ``base_params`` is the frozen pre-registered configuration; ``param_steps`` is
-    the +/- one-step neighbour per tunable parameter that drives criterion-6a
-    parameter sensitivity and the PBO configuration matrix. A parameter-free
-    strategy leaves both empty (its factory ignores the argument).
-    """
-
-    factory: SpecFactory
-    base_params: Mapping[str, float]
-    param_steps: Mapping[str, float]
-
-
-#: Strategy registry — Phase 3 adds one entry per study. Parameters are the
-#: PRE-REGISTERED, frozen values (see docs/pre_registration/).
-STRATEGIES: dict[str, StrategyEntry] = {
-    "reference_momentum": StrategyEntry(
-        factory=lambda _params: ReferenceMomentumSpec(),
-        base_params={},
-        param_steps={},
-    ),
-    "vwap_mean_reversion": StrategyEntry(
-        factory=vwap_mean_reversion_spec,
-        base_params={"entry_threshold": 0.004, "exit_threshold": 0.001},
-        param_steps={"entry_threshold": 0.001, "exit_threshold": 0.0005},
-    ),
-}
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
