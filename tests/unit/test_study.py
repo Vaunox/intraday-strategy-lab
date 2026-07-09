@@ -221,7 +221,6 @@ def test_run_study_produces_full_report_and_kills_no_edge(tmp_path: Path) -> Non
         costs,
         THRESH,
         ledger,
-        periods_per_year=PERIODS,
         spec_factory=_make_spec,
         base_params={"threshold": 0.0},
         param_steps={"threshold": 0.002},
@@ -260,7 +259,6 @@ def test_nan_pbo_fails_closed_not_pass_by_absence(tmp_path: Path) -> None:
         costs,
         THRESH,
         ledger,
-        periods_per_year=PERIODS,
         cross_symbol_candles={
             "S2": _series("S2", 13, days=6),
             "S3": _series("S3", 14, days=6),
@@ -285,12 +283,33 @@ def test_run_study_insufficient_when_no_cross_symbols(tmp_path: Path) -> None:
         load_cost_model(REPO_CONFIG),
         THRESH,
         TrialLedger(tmp_path / "trials"),
-        periods_per_year=PERIODS,
         cpcv_embargo=NO_EMBARGO,
         regime_labeler=_by_day,
     )
     assert report.kill_gate.verdict is Verdict.INSUFFICIENT
     assert not report.kill_gate.passed
+
+
+def test_run_study_insufficient_when_base_too_thin(tmp_path: Path) -> None:
+    # The realized-frequency annualization is data-dependent (len(trades)/span), so a base
+    # with too few trades yields an unstable factor and a CPCV distribution dominated by a
+    # handful of (possibly lucky) trades. The gate must refuse to certify (INSUFFICIENT),
+    # never grade a thin base or crash inside CPCV -- fail-closed, like the structural floors.
+    candles = _series("SYN", 30, days=1, bars_per_day=12)  # ~5 trades, below the min floor
+    ledger = TrialLedger(tmp_path / "trials")
+    report = run_study(
+        ThresholdMomentumSpec(0.0),
+        candles,
+        load_cost_model(REPO_CONFIG),
+        THRESH,
+        ledger,
+        cpcv_embargo=NO_EMBARGO,
+        regime_labeler=_by_day,
+    )
+    assert report.kill_gate.verdict is Verdict.INSUFFICIENT
+    assert not report.kill_gate.passed
+    assert report.trades.n_trades < THRESH.min_base_observations
+    assert ledger.count() == 0  # a non-starter logs no trial to the program effective-N
 
 
 def test_run_study_default_regime_labeler_runs_end_to_end(tmp_path: Path) -> None:
@@ -304,7 +323,6 @@ def test_run_study_default_regime_labeler_runs_end_to_end(tmp_path: Path) -> Non
         load_cost_model(REPO_CONFIG),
         THRESH,
         TrialLedger(tmp_path / "trials"),
-        periods_per_year=PERIODS,
         cross_symbol_candles={
             "S2": _series("S2", 18, days=8),
             "S3": _series("S3", 19, days=8),
@@ -375,7 +393,6 @@ def test_render_report_shows_provisional_stamp_only_when_set(tmp_path: Path) -> 
         load_cost_model(REPO_CONFIG),
         THRESH,
         TrialLedger(tmp_path / "trials"),
-        periods_per_year=PERIODS,
         cpcv_embargo=NO_EMBARGO,
         regime_labeler=_by_day,
     )

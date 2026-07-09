@@ -128,7 +128,11 @@ def combinatorial_purged_cv(
         exit_times: Label-window end (observation exit) per return.
         n_groups: Number of groups ``N`` (>= 2).
         k_test_groups: Test groups per combination ``k`` (1 <= k < N).
-        periods_per_year: Annualization factor (fixed Sharpe convention).
+        periods_per_year: Annualization factor — the strategy's REALIZED
+            observations-per-year (see
+            :func:`~lab.research.validation.sharpe.realized_periods_per_year`); a subset
+            path is annualized by the base series' frequency, its pooled trades
+            occurring at that same rate.
         embargo: Buffer applied at each test/train boundary (default one trading
             day); a test trade within this buffer of a train group is purged.
     """

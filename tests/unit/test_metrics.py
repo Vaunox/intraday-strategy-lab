@@ -3,24 +3,21 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
+import numpy as np
 import pytest
 
-from lab.core.config import load_settings
 from lab.research.validation.metrics import (
     deflated_sharpe_ratio,
     expected_max_sharpe,
     probabilistic_sharpe_ratio,
 )
 from lab.research.validation.sharpe import (
-    SharpeConvention,
     annualized_sharpe,
     per_period_sharpe,
+    realized_periods_per_year,
     return_stats,
 )
-
-REPO_CONFIG = Path(__file__).resolve().parents[2] / "config"
 
 
 # --- Sharpe convention ------------------------------------------------------ #
@@ -40,12 +37,34 @@ def test_sharpe_is_nan_on_degenerate_input() -> None:
     assert math.isnan(per_period_sharpe([2.0, 2.0, 2.0]))  # zero variance
 
 
-def test_convention_from_settings() -> None:
-    settings = load_settings("dev", config_dir=REPO_CONFIG, environ={})
-    convention = SharpeConvention.from_settings(settings)
-    assert convention.periods_per_year == 18750
-    assert convention.basis == "in_market"
-    assert convention.annualize(1.0) == pytest.approx(math.sqrt(18750))
+def test_realized_periods_per_year_is_observations_over_span() -> None:
+    assert realized_periods_per_year(1000, 5.0) == pytest.approx(200.0)
+    assert realized_periods_per_year(93_750, 5.0) == pytest.approx(18_750.0)
+
+
+def test_realized_periods_per_year_fails_closed_on_degenerate_input() -> None:
+    assert math.isnan(realized_periods_per_year(0, 5.0))  # no trades
+    assert math.isnan(realized_periods_per_year(100, 0.0))  # zero span
+    assert math.isnan(realized_periods_per_year(100, -1.0))  # negative span
+
+
+def test_annualization_uses_realized_not_fixed_frequency() -> None:
+    # PINS the realized-frequency convention against a regression to the fixed 18_750
+    # constant. A low-frequency strategy (500 trades / 5y = 100/yr) and a near-every-bar
+    # one (93_750 / 5y = 18_750/yr) must each annualize by sqrt(their OWN rate) -- a
+    # ~13.7x gap the old fixed constant would erase.
+    rng = np.random.default_rng(0)
+    returns = rng.normal(0.001, 0.01, size=500)
+    per_period = per_period_sharpe(returns)
+
+    low_ppy = realized_periods_per_year(500, 5.0)  # 100/yr
+    high_ppy = realized_periods_per_year(93_750, 5.0)  # 18_750/yr
+    assert annualized_sharpe(returns, low_ppy) == pytest.approx(per_period * math.sqrt(100.0))
+    assert annualized_sharpe(returns, high_ppy) == pytest.approx(per_period * math.sqrt(18_750.0))
+    # The low-frequency Sharpe must NOT be scaled by the old fixed 18_750 (the bug):
+    assert annualized_sharpe(returns, low_ppy) != pytest.approx(per_period * math.sqrt(18_750.0))
+    # ...and its scale factor is exactly sqrt(realized rate), proving realized scaling.
+    assert annualized_sharpe(returns, low_ppy) / per_period == pytest.approx(math.sqrt(100.0))
 
 
 def test_return_stats_symmetric() -> None:

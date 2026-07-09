@@ -46,14 +46,13 @@ features:
   trend_fast: 10
   trend_slow: 30
 
-# Fixed Sharpe convention (Part III Layer 2) — pinned so every study is
-# comparable. Sharpes are annualized by sqrt(periods_per_year) and scaled on
-# in-market (position-held) periods, not calendar time.
-sharpe:
-  # Decision periods per year at the default 5-min frequency:
-  # ~75 five-minute bars per session x ~250 trading sessions.
-  periods_per_year: 18750
-  basis: in_market
+# Sharpe convention (Part III Layer 2): annualization is by each strategy's REALIZED
+# frequency — its ACTUAL trades per operating year, computed per study from the backtest
+# (lab.research.validation.sharpe.realized_periods_per_year) — NOT a pinned calendar
+# constant. The former fixed `sharpe.periods_per_year: 18750` (all 5-min bars/year)
+# over-annualized any strategy that did not trade on ~every bar; it was removed so a
+# few-hundred-trades-a-year strategy and a near-every-bar one are each scaled on their
+# true trade rate and stay comparable.
 
 calendar:
   # IANA timezone the exchange operates in. Every timestamp and log line is IST.
