@@ -23,14 +23,14 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from lab.core.config import configure_logging_from_settings, load_settings
 from lab.core.constants import INDIA_TZ
-from lab.core.interfaces import StrategySpec
 from lab.core.logging import get_logger
 from lab.core.nse_calendar import NseCalendar
 from lab.core.types import BarInterval, Candle
@@ -40,14 +40,41 @@ from lab.research.reports.killgate import load_kill_gate_thresholds
 from lab.research.reports.paper import append_study_section
 from lab.research.reports.report import render_report
 from lab.research.strategies.reference import ReferenceMomentumSpec
-from lab.research.study import run_study
+from lab.research.strategies.vwap import vwap_mean_reversion_spec
+from lab.research.study import SpecFactory, run_study
 from lab.research.trials.ledger import TrialLedger
 from lab.research.validation.costs import load_cost_model
 from lab.research.validation.sharpe import SharpeConvention
 
-#: Strategy registry — Phase 3 adds one thin StrategySpec factory per study here.
-STRATEGIES: dict[str, Callable[[], StrategySpec]] = {
-    "reference_momentum": lambda: ReferenceMomentumSpec(),
+
+@dataclass(frozen=True)
+class StrategyEntry:
+    """A registered study: its spec factory plus the PRE-COMMITTED parameters.
+
+    ``base_params`` is the frozen pre-registered configuration; ``param_steps`` is
+    the +/- one-step neighbour per tunable parameter that drives criterion-6a
+    parameter sensitivity and the PBO configuration matrix. A parameter-free
+    strategy leaves both empty (its factory ignores the argument).
+    """
+
+    factory: SpecFactory
+    base_params: Mapping[str, float]
+    param_steps: Mapping[str, float]
+
+
+#: Strategy registry — Phase 3 adds one entry per study. Parameters are the
+#: PRE-REGISTERED, frozen values (see docs/pre_registration/).
+STRATEGIES: dict[str, StrategyEntry] = {
+    "reference_momentum": StrategyEntry(
+        factory=lambda _params: ReferenceMomentumSpec(),
+        base_params={},
+        param_steps={},
+    ),
+    "vwap_mean_reversion": StrategyEntry(
+        factory=vwap_mean_reversion_spec,
+        base_params={"entry_threshold": 0.004, "exit_threshold": 0.001},
+        param_steps={"entry_threshold": 0.001, "exit_threshold": 0.0005},
+    ),
 }
 
 
@@ -131,7 +158,8 @@ def main(argv: list[str] | None = None) -> None:
     }
     cross_candles = {symbol: series for symbol, series in cross_candles.items() if series}
 
-    spec = STRATEGIES[args.strategy]()
+    entry = STRATEGIES[args.strategy]
+    spec = entry.factory(entry.base_params)
     ledger = TrialLedger(Path(args.ledger_dir))
     log.info(
         "study_start",
@@ -148,6 +176,9 @@ def main(argv: list[str] | None = None) -> None:
         thresholds,
         ledger,
         periods_per_year=periods_per_year,
+        spec_factory=entry.factory,
+        base_params=entry.base_params,
+        param_steps=entry.param_steps,
         cross_symbol_candles=cross_candles or None,
         square_off=settings.calendar.session.square_off,
     )
