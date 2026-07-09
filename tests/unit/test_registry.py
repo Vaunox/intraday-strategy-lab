@@ -7,6 +7,7 @@ registered frozen params drifting away from what a study's pre-registration comm
 from __future__ import annotations
 
 from lab.research.strategies.breakout import BreakoutSpec
+from lab.research.strategies.mean_reversion import MeanReversionSpec
 from lab.research.strategies.registry import STRATEGIES
 from lab.research.strategies.vwap import VwapCrossSpec
 
@@ -37,6 +38,17 @@ def test_vwap_cross_registered_with_frozen_prereg_params() -> None:
     assert isinstance(spec, VwapCrossSpec)  # narrows type + checks the factory built the right spec
     assert spec.name == "vwap_cross"
     assert spec.cross_threshold == 0.002
+
+
+def test_mean_reversion_registered_with_frozen_prereg_params() -> None:
+    # P3.3: blind z-score fade -- entry_z 2.0 (±0.5), exit_z 0.5 (±0.25), lookback 20 fixed.
+    entry = STRATEGIES["mean_reversion"]
+    assert entry.base_params == {"entry_z": 2.0, "exit_z": 0.5, "lookback": 20.0}
+    assert entry.param_steps == {"entry_z": 0.5, "exit_z": 0.25}
+    spec = entry.factory(entry.base_params)
+    assert isinstance(spec, MeanReversionSpec)  # factory built the right spec
+    assert spec.name == "mean_reversion"
+    assert spec.entry_z == 2.0 and spec.exit_z == 0.5 and spec.lookback == 20
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:

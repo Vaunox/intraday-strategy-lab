@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.breakout import breakout_spec
+from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
 
@@ -52,5 +53,10 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=breakout_spec,
         base_params={"breakout_lookback": 20.0, "volume_mult": 1.5},
         param_steps={"breakout_lookback": 5.0, "volume_mult": 0.25},
+    ),
+    "mean_reversion": StrategyEntry(  # P3.3 -- intraday-reset z-score fade; blind params
+        factory=mean_reversion_spec,
+        base_params={"entry_z": 2.0, "exit_z": 0.5, "lookback": 20.0},
+        param_steps={"entry_z": 0.5, "exit_z": 0.25},
     ),
 }

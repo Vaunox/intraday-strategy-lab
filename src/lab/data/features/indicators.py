@@ -137,6 +137,41 @@ def intraday_donchian(data: OHLCV, period: int) -> tuple[FloatArray, FloatArray]
     return upper, lower
 
 
+def intraday_zscore(data: OHLCV, period: int) -> FloatArray:
+    """Rolling z-score of close over CURRENT-DAY bars only (resets each IST day).
+
+    ``out[i]`` = ``(close[i] - mean) / std`` over the last ``period`` bars sharing bar
+    ``i``'s IST trading date -- window ``[i - period + 1 .. i]``, INCLUDING bar ``i`` -- once a
+    full ``period``-bar intraday window has formed since the day's open, else ``NaN``.
+    Population std (``ddof=0``), matching the Bollinger convention (:func:`bollinger` /
+    TA-Lib ``BBANDS``); the z-score is the statistic Bollinger %B expresses (a band at
+    ``k*std`` is a z of ``k``), so this is the intraday-reset analogue of Bollinger used by
+    the P3.3 mean-reversion fade.
+
+    Intraday-reset by design (NOT a trailing window): an intraday fade must measure stretch
+    against TODAY's mean, never across the overnight gap -- a trailing window would read a
+    gap as a huge z-score and fade AGAINST the gap, silently becoming a gap-fade (a
+    different strategy). A FULL ``period``-bar window is required (the first ``period - 1``
+    bars of each day are ``NaN``): an expanding 2-3 bar window would give a degenerate std
+    and an explosive z. Strictly causal -- the value at bar ``i`` uses only bars ``0..i`` of
+    the same day -- so it is prefix-invariant (the dual-path skew contract).
+    """
+    close = data.close
+    n = len(close)
+    out = _empty(n)
+    day_start = 0
+    for i in range(n):
+        if i > 0 and data.timestamps[i].date() != data.timestamps[i - 1].date():
+            day_start = i  # reset the window at the IST trading-date boundary
+        window_start = i - period + 1
+        if window_start >= day_start:  # a FULL period-bar window has formed within the day
+            window = close[window_start : i + 1]
+            std = float(np.std(window))  # population std (ddof=0), matches TA-Lib BBANDS
+            if std > 0.0:
+                out[i] = (float(close[i]) - float(np.mean(window))) / std
+    return out
+
+
 def relative_volume(data: OHLCV, period: int) -> FloatArray:
     """Volume divided by the mean of the prior ``period`` volumes (excludes current)."""
     out = _empty(len(data))
