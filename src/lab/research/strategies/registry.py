@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.breakout import breakout_spec
+from lab.research.strategies.donchian_breakout import donchian_breakout_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
@@ -70,5 +71,10 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=pivot_reversion_spec,
         base_params={"entry_band": 0.001, "exit_band": 0.001},
         param_steps={"entry_band": 0.0005, "exit_band": 0.0005},
+    ),
+    "donchian_breakout": StrategyEntry(  # P3.6 -- global multi-session channel breakout
+        factory=donchian_breakout_spec,
+        base_params={"channel_lookback": 55.0},
+        param_steps={"channel_lookback": 10.0},
     ),
 }

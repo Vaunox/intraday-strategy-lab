@@ -7,6 +7,7 @@ registered frozen params drifting away from what a study's pre-registration comm
 from __future__ import annotations
 
 from lab.research.strategies.breakout import BreakoutSpec
+from lab.research.strategies.donchian_breakout import DonchianBreakoutSpec
 from lab.research.strategies.mean_reversion import MeanReversionSpec
 from lab.research.strategies.pivot_reversion import PivotReversionSpec
 from lab.research.strategies.registry import STRATEGIES
@@ -73,6 +74,17 @@ def test_pivot_reversion_registered_with_frozen_prereg_params() -> None:
     assert isinstance(spec, PivotReversionSpec)  # factory built the right spec
     assert spec.name == "pivot_reversion"
     assert spec.entry_band == 0.001 and spec.exit_band == 0.001
+
+
+def test_donchian_breakout_registered_with_frozen_prereg_params() -> None:
+    # P3.6: global multi-session channel breakout -- channel_lookback 55 (±10), one real knob.
+    entry = STRATEGIES["donchian_breakout"]
+    assert entry.base_params == {"channel_lookback": 55.0}
+    assert entry.param_steps == {"channel_lookback": 10.0}
+    spec = entry.factory(entry.base_params)
+    assert isinstance(spec, DonchianBreakoutSpec)  # factory built the right spec
+    assert spec.name == "donchian_breakout"
+    assert spec.channel_lookback == 55
 
 
 def test_every_registered_factory_builds_a_named_spec() -> None:
