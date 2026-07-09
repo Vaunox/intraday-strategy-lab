@@ -52,3 +52,23 @@ evidence:
                              # strategy over the multi-year span (even one trade/week ~ 570 trades),
                              # so it rejects only degenerate configs; it also turns CPCV's "need
                              # >= n_groups observations" from a crash into a clean refusal.
+
+# Panel scope (Phase 3, per-symbol-then-aggregate). A panel study's verdict has TWO
+# parts, BOTH required: (1) the equal-weight panel-PORTFOLIO daily return stream clears
+# the seven criteria above (scored on the aggregate stream, realized-frequency ~252/yr);
+# (2) breadth across the panel symbols. These pin part (2), the panel-adapted robustness
+# fractions (criterion 6 aggregated across the panel), and the structural floors. Frozen
+# like every threshold here -- pre-committed, never tuned to rescue a study.
+panel:
+  # (2) breadth -- BOTH must hold
+  breadth_median_path_sharpe_min: 1.0     # median across panel symbols of each symbol's CPCV median path-Sharpe > this
+  breadth_positive_fraction_min: 0.60     # >= this fraction of panel symbols individually positive
+  # 0.60 not 0.70: the frozen-49 are correlated large-caps, so a real edge misses on
+  # choppy/correlated laggards; 0.70 risks a false-KILL, 0.60 is a real majority without
+  # demanding near-unanimity.
+  # criterion 6 aggregated across the panel symbols (fractions, pre-committed)
+  noise_survives_fraction_min: 0.60       # >= this fraction of panel symbols survive OHLC-noise injection
+  two_engine_reconcile_fraction_min: 1.0  # ALL panel symbols must reconcile across the two engines
+  # structural floors -> INSUFFICIENT (not KILL) when the panel is too thin to certify
+  min_panel_symbols: 6                    # fewer scored panel symbols than this -> cannot certify a panel
+  min_portfolio_days: 250                 # fewer aggregate portfolio days than this (< ~1 year) -> cannot certify
