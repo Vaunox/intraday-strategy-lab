@@ -14,8 +14,8 @@ From a rule-based `StrategySpec` to an honest, cost-inclusive, overfitting-resis
 - **Slippage:** 0.05–0.20%, size/liquidity-aware; widen in stress.
 - **Intraday square-off** at configured session end; no overnight carry.
 
-## Sharpe convention (fixed before Phase 2)
-Annualized by √(`sharpe.periods_per_year`); scaled on **in-market periods, not calendar**; identical across every study. A bare "Sharpe" is not comparable across intraday strategies — the convention is pinned so P3.1 and P3.13 are.
+## Sharpe convention (fixed before Phase 2; realized-frequency)
+Annualized by each strategy's **realized frequency** — `realized_periods_per_year` = return observations ÷ operating-span-years, derived per study from the backtest, never a fixed calendar constant; scaled on **in-market periods, not calendar**; identical convention across every study. A bare "Sharpe" is not comparable across intraday strategies — the convention is pinned so P3.1 and P3.13 are. (The original fixed `sharpe.periods_per_year` = 18750 constant was removed as it contradicted the in-market rule — it annualized a few-hundred-trades-a-year strategy as if it traded ~18750 times a year; see the `MASTER_BLUEPRINT.md` §255 amendment / PR #17. A base too thin to annualize stably, `< evidence.min_base_observations` trades, returns INSUFFICIENT.)
 
 ## Validation — two questions, two tools
 - **Is the edge real?** Purged k-fold + embargo (**1-trading-day embargo** ≥ the intraday holding horizon); CPCV (N groups, k test → C(N,k) splits → φ = C(N,k)·k/N paths; judge the *distribution* of path-Sharpes); Deflated Sharpe Ratio (corrects for the **effective number of independent trials**, skew, kurtosis, length; fed by the program-wide ledger of per-trial return streams, correlated variants clustered); PBO via CSCV.
