@@ -172,6 +172,8 @@ Monotonic in turnover: **lower-turnover = less bad; faster = worse; fastest = co
 
 **Refinement (P3.8, 2026-07-10):** the vol-expansion-gated breakout (C1, **−7.36**) slots in as the **second-least-bad** continuation bet, just behind Donchian (−6.13). The volatility gate **helped** the breakout (ungated −8.75 → gated −7.36) but did **not overtake the low-turnover Donchian** — so the gradient's least-bad point stays Donchian, and the read holds: any edge, if it exists, is long-horizon, low-turnover continuation, and a vol filter narrows-but-doesn't-close the gap. (The mirror test — vol-*contraction*-gated *reversion*, C2 −25.64 — barely moved the mean-reversion, which stays catastrophically dead: the filter nudged continuation, not reversion.)
 
+**Where this points (post-project, deferred):** the low-turnover-continuation read + the small-cap / own-strategy / ensemble follow-ups it motivates are captured as a durable, **record-only** roadmap in [`POST_PROJECT_DIRECTIONS.md`](POST_PROJECT_DIRECTIONS.md) — deferred until the P3.1–P3.14 catalog and the multi-factor phase are complete. **None of it is active; it must not influence any current pre-registration.**
+
 ---
 
 ## Open decisions / surfaced ambiguities
