@@ -42,6 +42,17 @@ holdout_6d:
   - ADANIPORTS  # ~253  - mid,    infra
   - NESTLEIND   # ~134  - bottom, FMCG
 
+# Criterion-7 regime method (operator ruling, 2026-07-09) -- FROZEN, must not drift.
+# The volatility/trend regime for the panel PORTFOLIO is derived from an EQUAL-WEIGHT
+# PANEL PRICE INDEX (the 10 names' prices), NOT from the strategy's own P&L. Year x
+# hi/lo-vol x up/down-trend is read off the index path -- the market itself, exogenous
+# to whether the strategy traded or profited -- faithfully mirroring the single-symbol
+# labeler, which uses price, not trades. Deliberately NON-CIRCULAR. It must NOT be
+# weakened to year-only (tests less than criterion 7 intends -> easier gate -> PASS
+# bias) nor made P&L-derived (a trend read off the strategy's own returns would bucket
+# P&L by P&L, defeating the "drop the best bucket, stay positive" sub-test).
+regime_method: panel_index_year_vol_trend
+
 # REQUIRED interpretation stamp on every panel study result (operator ruling,
 # 2026-07-09). The frozen-49 are ALL large-caps (ADV Rs 122-1647 cr): this panel
 # spans a real ~10x arbitrage gradient but does NOT reach the genuinely small,
