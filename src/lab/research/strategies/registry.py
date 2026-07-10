@@ -15,8 +15,11 @@ from dataclasses import dataclass
 
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.adaptive_ma import adaptive_ma_cross_spec, adaptive_ma_slope_spec
+from lab.research.strategies.adaptive_ma_adx import adaptive_ma_adx_spec
+from lab.research.strategies.bollinger_rsi import bollinger_rsi_spec
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.bull_flag import bull_flag_spec
+from lab.research.strategies.donchian_atr_stop import donchian_atr_stop_spec
 from lab.research.strategies.donchian_breakout import donchian_breakout_spec
 from lab.research.strategies.gap_and_go import gap_and_go_spec
 from lab.research.strategies.gap_fade import gap_fade_spec
@@ -24,6 +27,8 @@ from lab.research.strategies.ma_crossover import ma_crossover_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.momentum_pullback import momentum_pullback_spec
 from lab.research.strategies.opening_range_breakout import opening_range_breakout_spec
+from lab.research.strategies.orb_vwap import orb_vwap_spec
+from lab.research.strategies.pivot_macd import pivot_macd_spec
 from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.reversal import reversal_spec
@@ -33,6 +38,7 @@ from lab.research.strategies.volatility_filters import (
     vol_expansion_breakout_spec,
 )
 from lab.research.strategies.vwap import vwap_cross_spec, vwap_mean_reversion_spec
+from lab.research.strategies.vwap_breakout_volume import vwap_breakout_volume_spec
 
 SpecFactory = Callable[[Mapping[str, float]], StrategySpec]
 
@@ -148,5 +154,36 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=ma_crossover_spec,
         base_params={"fast_period": 20.0, "slow_period": 50.0},
         param_steps={"fast_period": 5.0, "slow_period": 10.0},
+    ),
+    # --- Phase 4 multi-factor combinations (blind, a-priori, minimal AND-confluence) ---
+    "vwap_breakout_volume": StrategyEntry(  # P4.1 -- break on trend-side-of-VWAP + volume surge
+        factory=vwap_breakout_volume_spec,
+        base_params={"breakout_lookback": 20.0, "vol_mult": 1.5},
+        param_steps={"breakout_lookback": 5.0, "vol_mult": 0.25},
+    ),
+    "orb_vwap": StrategyEntry(  # P4.2 -- opening-range break + VWAP confirmation
+        factory=orb_vwap_spec,
+        base_params={"opening_range_minutes": 30.0, "break_buffer": 0.001},
+        param_steps={"opening_range_minutes": 15.0, "break_buffer": 0.0005},
+    ),
+    "bollinger_rsi": StrategyEntry(  # P4.3 -- Bollinger band fade + RSI extreme
+        factory=bollinger_rsi_spec,
+        base_params={"bb_num_std": 2.0, "rsi_oversold": 30.0},
+        param_steps={"bb_num_std": 0.5, "rsi_oversold": 5.0},
+    ),
+    "adaptive_ma_adx": StrategyEntry(  # P4.4 -- KAMA trend gated by ADX strength
+        factory=adaptive_ma_adx_spec,
+        base_params={"kama_period": 10.0, "adx_threshold": 25.0},
+        param_steps={"kama_period": 5.0, "adx_threshold": 5.0},
+    ),
+    "pivot_macd": StrategyEntry(  # P4.5 -- MACD crossover at a classic pivot level (1 knob)
+        factory=pivot_macd_spec,
+        base_params={"entry_band": 0.002},
+        param_steps={"entry_band": 0.001},
+    ),
+    "donchian_atr_stop": StrategyEntry(  # P4.6 -- Donchian breakout + ATR trailing stop
+        factory=donchian_atr_stop_spec,
+        base_params={"channel_lookback": 55.0, "atr_mult": 2.0},
+        param_steps={"channel_lookback": 10.0, "atr_mult": 0.5},
     ),
 }

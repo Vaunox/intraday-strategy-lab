@@ -58,6 +58,17 @@ The gap-fill **fade** is the directional opposite of gap-and-go. A directional o
 
 ---
 
+## Phase 4 kickoff — operator rulings (2026-07-10)
+
+Multi-factor combination studies begin (the single-factor catalog P3.1–P3.14 is complete, all KILL/cost-dead). Two rulings:
+
+- **Ruling 1 (revises the earlier "Phase 4 excluded from batch-draft").** Draft + commit all **six blueprint combinations'** pre-registrations in ONE blind block — **P4.1** VWAP+Breakout+Volume · **P4.2** ORB+VWAP · **P4.3** Bollinger+RSI · **P4.4** Adaptive-MA+ADX · **P4.5** Pivot+MACD · **P4.6** Donchian+ATR-stop — with the §6 and no-lookahead landscape computed for all six. Then **run incrementally from P4.1, batches of 2–3 (or until a STOP)**, STOP-and-flag intact. **Hold all six for individual sign-off before any run.**
+- **Ruling 2 (Phase-4 policy, forward-only): the §6 cost pre-check is INFORMATIONAL ONLY in Phase 4 — no battery is skipped.** Every combination runs the **full panel battery** for a decisive verdict; the §6 landing is reported as *color*, never a gate. This **moots the single-symbol→panel scope mismatch** (no skip = no wrong skip), changes **no threshold**, and leaves all **Phase-3 cost-dead records untouched**.
+- **Discipline (unchanged from P3):** the six are the **blueprint's** combinations (no Phase-3-least-bad-pattern substitutions); all params blind / a-priori (nothing from the turnover-gradient, sparse-big-move observations, or `POST_PROJECT_DIRECTIONS.md`); **minimal AND-confluence, fewest knobs** (bull_flag's PBO failure is the caution — no knobs to rescue); every param ledger-charged; the same unchanged seven-point gate; **no-lookahead prefix-invariance a hard precondition per composite**; **flag any near-mutually-exclusive confluence** (a P3.9-style degeneracy) rather than record a hollow number.
+- **Out of scope:** Phase 4.5 meta-labeling and the Phase-5 synthesis are separate later tasks — not rolled into. **Hold after the six preregs land.**
+
+---
+
 ## Phase 3 readiness — BLOCKING issues (opened 2026-07-08, call-site audit)
 
 > A call-site verification of the Gate-2 harness (proving each primitive is actually *invoked*, not merely defined) found four issues that must close before **Phase 3.1** opens. Two are genuine correctness gaps, not documentation. Until all four close, kill-gate criteria **3 (PBO)** and **6/7 (robustness/regime)** are **provisional**.

@@ -154,6 +154,34 @@ def test_batch_p310_p314_registered_with_frozen_prereg_params() -> None:
         assert STRATEGIES[name].factory(STRATEGIES[name].base_params).name == name
 
 
+def test_phase4_combinations_registered_with_frozen_prereg_params() -> None:
+    # P4.1-P4.6 blind multi-factor combinations (operator ruling 2026-07-10): pin frozen params.
+    assert STRATEGIES["vwap_breakout_volume"].base_params == {
+        "breakout_lookback": 20.0,
+        "vol_mult": 1.5,
+    }
+    assert STRATEGIES["orb_vwap"].base_params == {
+        "opening_range_minutes": 30.0,
+        "break_buffer": 0.001,
+    }
+    assert STRATEGIES["bollinger_rsi"].base_params == {"bb_num_std": 2.0, "rsi_oversold": 30.0}
+    assert STRATEGIES["adaptive_ma_adx"].base_params == {"kama_period": 10.0, "adx_threshold": 25.0}
+    assert STRATEGIES["pivot_macd"].base_params == {"entry_band": 0.002}
+    assert STRATEGIES["donchian_atr_stop"].base_params == {
+        "channel_lookback": 55.0,
+        "atr_mult": 2.0,
+    }
+    for name in (
+        "vwap_breakout_volume",
+        "orb_vwap",
+        "bollinger_rsi",
+        "adaptive_ma_adx",
+        "pivot_macd",
+        "donchian_atr_stop",
+    ):
+        assert STRATEGIES[name].factory(STRATEGIES[name].base_params).name == name
+
+
 def test_every_registered_factory_builds_a_named_spec() -> None:
     for entry in STRATEGIES.values():
         spec = entry.factory(entry.base_params)
