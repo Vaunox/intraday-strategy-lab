@@ -120,6 +120,36 @@ def test_volatility_filters_both_registered_with_frozen_prereg_params() -> None:
     assert c2.factory(c2.base_params).name == "vol_contraction_reversion"
 
 
+def test_batch_p310_p314_registered_with_frozen_prereg_params() -> None:
+    # P3.10-P3.14 batch-drafted blind block (operator ruling 2026-07-10): pin the frozen params.
+    assert STRATEGIES["gap_and_go"].base_params == {"gap_threshold": 0.010, "vol_mult": 1.2}
+    assert STRATEGIES["gap_and_go"].param_steps == {"gap_threshold": 0.005, "vol_mult": 0.2}
+    assert STRATEGIES["opening_range_breakout"].base_params == {
+        "opening_range_minutes": 30.0,
+        "break_buffer": 0.001,
+    }
+    assert STRATEGIES["opening_range_breakout"].param_steps == {
+        "opening_range_minutes": 15.0,
+        "break_buffer": 0.0005,
+    }
+    assert STRATEGIES["bull_flag"].base_params == {"impulse_threshold": 0.010, "tight_frac": 0.5}
+    assert STRATEGIES["bull_flag"].param_steps == {"impulse_threshold": 0.005, "tight_frac": 0.15}
+    assert STRATEGIES["scalp_mean_reversion"].base_params == {"entry_threshold": 0.002}
+    assert STRATEGIES["scalp_momentum"].base_params == {"entry_threshold": 0.002}
+    assert STRATEGIES["scalp_mean_reversion"].param_steps == {"entry_threshold": 0.001}
+    assert STRATEGIES["ma_crossover"].base_params == {"fast_period": 20.0, "slow_period": 50.0}
+    assert STRATEGIES["ma_crossover"].param_steps == {"fast_period": 5.0, "slow_period": 10.0}
+    for name in (
+        "gap_and_go",
+        "opening_range_breakout",
+        "bull_flag",
+        "scalp_mean_reversion",
+        "scalp_momentum",
+        "ma_crossover",
+    ):
+        assert STRATEGIES[name].factory(STRATEGIES[name].base_params).name == name
+
+
 def test_every_registered_factory_builds_a_named_spec() -> None:
     for entry in STRATEGIES.values():
         spec = entry.factory(entry.base_params)
