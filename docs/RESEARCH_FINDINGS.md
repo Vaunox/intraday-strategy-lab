@@ -2,7 +2,7 @@
 
 > **How this document is maintained.** This is a *living research paper*, authored and updated by the engineer/agent building each study — **not pre-filled**. The strategy reference and prior-evidence tables in §4 are background (what each strategy is and what the literature already suggests); the **results** fields (§4 scorecard and §5–§6) are scaffolds. As each strategy study (Phase 3 / Phase 4) completes, its author replaces the `‹placeholder›` fields with the study's **real, cost-inclusive, kill-gate numbers** and its honest verdict. Do not write results that have not been produced by an actual validated run. An honest KILL is a complete result.
 
-*Status: **COMPLETE** — Phase 5 findings synthesis (2026-07-10). All 25 specs recorded (§5 / §6); cross-strategy synthesis (§7) + conclusion (§8) written. Exploration-grade (frozen-49 survivor-only panel). §4.3 verdict-grade scorecard: see the pending-ruling note there. Phase 4.5 meta-labeling not conducted (§6b, out of scope).*
+*Status: **COMPLETE** — Phase 5 findings synthesis (2026-07-10). All 25 specs recorded (§5 / §6); cross-strategy synthesis (§7) + conclusion (§8) written. §4.3 scorecard populated per-spec (25 rows), every row stamped exploration-grade / provisional upper-bound (frozen-49 survivor-only panel; operator ruling A). Phase 4.5 meta-labeling not conducted (§6b, out of scope).*
 
 ---
 
@@ -121,35 +121,40 @@ The slate is fixed before testing. §4.1 defines each strategy and its exact Kit
 
 ### 4.3 — Results scorecard (filled as studies complete)
 
-> **⚠ §4.3 status — PENDING operator ruling (A vs B), left empty until confirmed.** Every result produced is **exploration-grade / provisional upper-bound** — scored on the **frozen-49 survivor-only** backfill (45 current NIFTY-50 members + 4 demoted names; the 5 current members ETERNAL / INDIGO / JIOFIN / MAXHEALTH / TMPV are absent), a **10-name ADV-tiered panel** (+ 5 held-out reserved, never scored), **5-minute OHLCV**. **No spec is verdict-grade; zero cleared the seven-point kill-gate.** Per the Phase-5 ruling this scorecard stays with `‹—›` placeholders until the operator confirms whether to **(A)** populate it with these numbers, each row stamped exploration-grade with the caveats above, or **(B)** keep it reserved for future backfill-verified verdicts. **The full per-spec numbers are recorded in §5 / §6 either way.**
+> **⚠ EXPLORATION-GRADE / PROVISIONAL UPPER-BOUND — every row (operator ruling A, populated 2026-07-10).** Scored on the **frozen-49 survivor-only** backfill (49 names = **45 current NIFTY-50 members + 4 demoted**; the 5 current members ETERNAL / INDIGO / JIOFIN / MAXHEALTH / TMPV are **absent** — §2.1), a **10-name ADV-tiered scored panel** (+ 5 held-out reserved, **never scored**), **5-minute OHLCV**. **No row is verdict-grade; zero cleared the seven-point kill-gate.** "CPCV median Sharpe (net)" is the aggregate equal-weight-panel path-Sharpe, net of the full round-trip cost; **DSR = 0.000 wherever the Sharpe is negative** (the deflation had no positive to shrink). **§6-cost-dead** rows had median per-trade gross below the ~0.182% round-trip cost, so the full battery was skipped (no panel Sharpe / DSR / PBO — see §5). Listed **per spec (25 rows: 19 single-factor + 6 composite)**; breadth, PF and diagnosis are in §5 / §6.
 
 **Single-factor (Phase 3)**
-| ID | Strategy | Category | Verdict | CPCV median Sharpe (net) | DSR | PBO | Section |
+| ID | Spec | Category | Verdict | CPCV median Sharpe (net) | DSR | PBO | § |
 |---|---|---|---|---|---|---|---|
-| P3.1 | VWAP | Trend/MR | ‹—› | ‹—› | ‹—› | ‹—› | §5.1 |
-| P3.2 | Breakout / Filters | Breakout | ‹—› | ‹—› | ‹—› | ‹—› | §5.2 |
-| P3.3 | Mean Reversion | Mean-reversion | ‹—› | ‹—› | ‹—› | ‹—› | §5.3 |
-| P3.4 | Reversal Trading | Reversal | ‹—› | ‹—› | ‹—› | ‹—› | §5.4 |
-| P3.5 | Pivot Points | S/R | ‹—› | ‹—› | ‹—› | ‹—› | §5.5 |
-| P3.6 | Donchian Channels | Breakout | ‹—› | ‹—› | ‹—› | ‹—› | §5.6 |
-| P3.7 | Adaptive Moving Averages | Trend | ‹—› | ‹—› | ‹—› | ‹—› | §5.7 |
-| P3.8 | Volatility-Based Filters | Overlay | ‹—› | ‹—› | ‹—› | ‹—› | §5.8 |
-| P3.9 | Momentum Pullback | Momentum | ‹—› | ‹—› | ‹—› | ‹—› | §5.9 |
-| P3.10 | Gap and Go | Momentum | ‹—› | ‹—› | ‹—› | ‹—› | §5.10 |
-| P3.11 | Opening Range Breakout | Breakout | ‹—› | ‹—› | ‹—› | ‹—› | §5.11 |
-| P3.12 | Bull Flag | Pattern | ‹—› | ‹—› | ‹—› | ‹—› | §5.12 |
-| P3.13 | Scalping | Fast | ‹—› | ‹—› | ‹—› | ‹—› | §5.13 |
-| P3.14 | Moving Average Crossovers | Trend | ‹—› | ‹—› | ‹—› | ‹—› | §5.14 |
+| P3.1-V1 | vwap_mean_reversion | fade | **KILL** | −18.793 | 0.000 | 0.000 | §5.1 |
+| P3.1-V2 | vwap_cross | trend | **KILL** | −11.121 | 0.000 | 0.000 | §5.1 |
+| P3.2 | breakout | breakout | **KILL** | −8.753 | 0.000 | 0.000 | §5.2 |
+| P3.3 | mean_reversion | fade | **KILL** | −27.040 | 0.000 | 0.000 | §5.3 |
+| P3.4 | reversal | reversal | **KILL** | −9.910 | 0.000 | 0.000 | §5.4 |
+| P3.5 | pivot_reversion | S/R fade | **KILL** | −9.848 | 0.000 | 0.000 | §5.5 |
+| P3.6 | donchian_breakout | breakout/trend | **KILL** | −6.132 | 0.000 | 0.000 | §5.6 |
+| P3.7-V1 | adaptive_ma_cross | trend | **KILL** | −12.948 | 0.000 | 0.000 | §5.7 |
+| P3.7-V2 | adaptive_ma_slope | trend | **COST-DEAD (§6)** | n/a — battery skipped (gross 0.122%) | n/a | n/a | §5.7 |
+| P3.8-C1 | vol_expansion_breakout | vol-gated | **KILL** | −7.360 | 0.000 | 0.000 | §5.8 |
+| P3.8-C2 | vol_contraction_reversion | vol-gated fade | **KILL** | −25.636 | 0.000 | 0.000 | §5.8 |
+| P3.9 | momentum_pullback | momentum | **COST-DEAD (§6)** | n/a — battery skipped (degenerate; gross ~0.13%) | n/a | n/a | §5.9 |
+| P3.10 | gap_and_go | gap continuation | **KILL** | −0.743 | 0.000 | 0.000 | §5.10 |
+| P3.10b | gap_fade | gap fade | **KILL** | −0.578 | 0.000 | 0.043 | §5.10 |
+| P3.11 | opening_range_breakout | breakout | **KILL** | −5.395 | 0.000 | 0.143 | §5.11 |
+| P3.12 | bull_flag | pattern | **KILL** | −0.651 | 0.000 | **0.400** | §5.12 |
+| P3.13-MR | scalp_mean_reversion | fast fade | **COST-DEAD (§6)** | n/a — battery skipped (gross 0.105%) | n/a | n/a | §5.13 |
+| P3.13-mom | scalp_momentum | fast momentum | **COST-DEAD (§6)** | n/a — battery skipped (gross 0.105%) | n/a | n/a | §5.13 |
+| P3.14 | ma_crossover | trend | **KILL** | −11.745 | 0.000 | 0.000 | §5.14 |
 
 **Multi-factor combinations (Phase 4)**
-| ID | Combination | Verdict | CPCV median Sharpe (net) | DSR | PBO | Section |
+| ID | Combination (spec) | Verdict | CPCV median Sharpe (net) | DSR | PBO | § |
 |---|---|---|---|---|---|---|
-| P4.1 | VWAP + Breakout + Volume Surge | ‹—› | ‹—› | ‹—› | ‹—› | §6.1 |
-| P4.2 | ORB + VWAP Confirmation | ‹—› | ‹—› | ‹—› | ‹—› | §6.2 |
-| P4.3 | Bollinger MR + RSI Extreme | ‹—› | ‹—› | ‹—› | ‹—› | §6.3 |
-| P4.4 | Adaptive MA + ADX | ‹—› | ‹—› | ‹—› | ‹—› | §6.4 |
-| P4.5 | Pivot Confluence + MACD | ‹—› | ‹—› | ‹—› | ‹—› | §6.5 |
-| P4.6 | Donchian Breakout + ATR Stop | ‹—› | ‹—› | ‹—› | ‹—› | §6.6 |
+| P4.1 | VWAP + Breakout + Volume (`vwap_breakout_volume`) | **KILL** | −8.202 | 0.000 | 0.000 | §6.1 |
+| P4.2 | ORB + VWAP (`orb_vwap`) — ≡ P3.11 ORB | **KILL** | −5.395 | 0.000 | 0.143 | §6.2 |
+| P4.3 | Bollinger MR + RSI (`bollinger_rsi`) | **KILL** | −13.126 | 0.000 | 0.000 | §6.3 |
+| P4.4 | Adaptive MA + ADX (`adaptive_ma_adx`) | **KILL** | −39.807 | 0.000 | 0.000 | §6.4 |
+| P4.5 | Pivot + MACD (`pivot_macd`) | **KILL** | −6.078 | 0.000 | 0.000 | §6.5 |
+| P4.6 | Donchian + ATR Stop (`donchian_atr_stop`) | **KILL** | −9.215 | 0.000 | 0.000 | §6.6 |
 
 ---
 
