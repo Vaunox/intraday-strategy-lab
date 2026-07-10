@@ -16,12 +16,17 @@ from dataclasses import dataclass
 from lab.core.interfaces import StrategySpec
 from lab.research.strategies.adaptive_ma import adaptive_ma_cross_spec, adaptive_ma_slope_spec
 from lab.research.strategies.breakout import breakout_spec
+from lab.research.strategies.bull_flag import bull_flag_spec
 from lab.research.strategies.donchian_breakout import donchian_breakout_spec
+from lab.research.strategies.gap_and_go import gap_and_go_spec
+from lab.research.strategies.ma_crossover import ma_crossover_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.momentum_pullback import momentum_pullback_spec
+from lab.research.strategies.opening_range_breakout import opening_range_breakout_spec
 from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.reversal import reversal_spec
+from lab.research.strategies.scalping import scalp_mean_reversion_spec, scalp_momentum_spec
 from lab.research.strategies.volatility_filters import (
     vol_contraction_reversion_spec,
     vol_expansion_breakout_spec,
@@ -107,5 +112,35 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=momentum_pullback_spec,
         base_params={"trend_period": 50.0, "rsi_pullback": 30.0},
         param_steps={"trend_period": 10.0, "rsi_pullback": 5.0},
+    ),
+    "gap_and_go": StrategyEntry(  # P3.10 -- confirmed opening-gap continuation; blind
+        factory=gap_and_go_spec,
+        base_params={"gap_threshold": 0.010, "vol_mult": 1.2},
+        param_steps={"gap_threshold": 0.005, "vol_mult": 0.2},
+    ),
+    "opening_range_breakout": StrategyEntry(  # P3.11 -- opening-range break; blind
+        factory=opening_range_breakout_spec,
+        base_params={"opening_range_minutes": 30.0, "break_buffer": 0.001},
+        param_steps={"opening_range_minutes": 15.0, "break_buffer": 0.0005},
+    ),
+    "bull_flag": StrategyEntry(  # P3.12 -- impulse + tight consolidation + breakout; blind
+        factory=bull_flag_spec,
+        base_params={"impulse_threshold": 0.010, "tight_frac": 0.5},
+        param_steps={"impulse_threshold": 0.005, "tight_frac": 0.15},
+    ),
+    "scalp_mean_reversion": StrategyEntry(  # P3.13 MR -- fade the last-bar micro move; blind
+        factory=scalp_mean_reversion_spec,
+        base_params={"entry_threshold": 0.002},
+        param_steps={"entry_threshold": 0.001},
+    ),
+    "scalp_momentum": StrategyEntry(  # P3.13 momentum -- chase the last-bar micro move; blind
+        factory=scalp_momentum_spec,
+        base_params={"entry_threshold": 0.002},
+        param_steps={"entry_threshold": 0.001},
+    ),
+    "ma_crossover": StrategyEntry(  # P3.14 -- fast/slow SMA crossover; blind
+        factory=ma_crossover_spec,
+        base_params={"fast_period": 20.0, "slow_period": 50.0},
+        param_steps={"fast_period": 5.0, "slow_period": 10.0},
     ),
 }

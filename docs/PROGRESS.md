@@ -36,6 +36,20 @@ Governs **every** Phase-3/4 catalog study while the universe is the **frozen-49 
 
 ---
 
+## Operator ruling (2026-07-10) — batch-draft the remaining single-factor slate, run incremental
+
+After P3.9, the remaining single-factor pre-registrations (**P3.10** gap-and-go · **P3.11** ORB · **P3.12** bull flag · **P3.13** scalping [both-owed: MR + momentum, two specs] · **P3.14** MA crossovers) are **drafted + committed in ONE blind block**, ahead of any run:
+
+- **All params frozen BLIND / a-priori only** — no data peek; **nothing from the continuation-gradient observation or `POST_PROJECT_DIRECTIONS.md` may enter any construction.** If a mechanism genuinely seems to need a learned input → **STOP-and-flag, do not import it.**
+- **Increases blindness** vs per-study drafting: drafting all remaining designs at once means no study's construction can be shaped (even unconsciously) by an earlier study's outcome.
+- **Running stays incremental** — batches of 3–4 (or until a STOP), STOP-and-flag fully intact. **Pre-run revision remains allowed for a genuine mechanism bug** (P3.7 degenerate-dichotomy / P3.9 degenerate-base precedent).
+- Each prereg **surfaces its §6 cost-viability landing** (clearly viable / dead / borderline) and **flags a degenerate trade-count base** rather than recording a hollow median (P3.9 lesson).
+- **All six held for individual sign-off before any run.**
+- **Phase 4 (multi-factor) is EXCLUDED** — those build on Phase-3 outcomes and are drafted later.
+- **Data note (surfaced at drafting):** the archive holds **5-minute bars only** (no 1/3-min), so **P3.13 scalping is tested at 5-min** — a coarser-than-natural proxy; flagged in its prereg, cost-dead is the expected honest landing.
+
+---
+
 ## Phase 3 readiness — BLOCKING issues (opened 2026-07-08, call-site audit)
 
 > A call-site verification of the Gate-2 harness (proving each primitive is actually *invoked*, not merely defined) found four issues that must close before **Phase 3.1** opens. Two are genuine correctness gaps, not documentation. Until all four close, kill-gate criteria **3 (PBO)** and **6/7 (robustness/regime)** are **provisional**.
