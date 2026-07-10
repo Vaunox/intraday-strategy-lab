@@ -8,14 +8,14 @@
 
 ## Abstract
 
-‹To be written after the studies are complete. One paragraph: what was tested (the 20-strategy slate), on what data (Kite historical NSE equities), under what discipline (purged CV / CPCV / Deflated Sharpe / PBO / full Indian costs / seven-point kill-gate), and the honest bottom line — which strategies (if any) held a real, cost-surviving edge.›
+‹To be written after the studies are complete. One paragraph: what was tested (**25 strategy specs — 19 single-factor + 6 multi-factor combinations**, across the 20 blueprint study-rows P3.1–P3.14 / P4.1–P4.6), on what data (Kite historical NSE equities), under what discipline (purged CV / CPCV / Deflated Sharpe / PBO / full Indian costs / seven-point kill-gate), and the honest bottom line — which strategies (if any) held a real, cost-surviving edge.›
 
 ---
 
 ## 1. Objective & scope
 
 - **Question:** Does any strategy in a fixed slate of classic intraday techniques hold a small, real, cost-surviving edge on liquid NSE cash equities, using only Kite historical candle data?
-- **Slate:** 14 single-factor strategies + 6 multi-factor combinations (see §4).
+- **Slate:** 14 single-factor study-categories + 6 multi-factor combinations (see §4) — run as **19 single-factor specs + 6 combination specs = 25 total** (owed directional variants, e.g. VWAP cross/reversion and gap-and-go/gap-fade, are separate specs).
 - **Explicitly not claimed:** "high stable profit." SEBI studies find over 90% of retail F&O traders lose money (≈91% of individual traders in FY24; ~93% over FY22–FY24). *This is a humility anchor on retail active trading; note the SEBI figure is F&O-specific, whereas this program tests **cash-equity intraday** — a related but distinct population, not the same statistic.* The achievable deliverable is an honest per-strategy verdict.
 - **Research-only:** no live trading, no capital at risk.
 
@@ -249,7 +249,7 @@ The slate is fixed before testing. §4.1 defines each strategy and its exact Kit
 
 ## 7. Cross-strategy synthesis
 
-‹Filled at Phase 5. Master results table ranking all 20 studies by DSR-adjusted, cost-inclusive path-Sharpe. Which cleared the seven-point kill-gate (if any). What distinguishes survivors from failures — category, frequency, cost sensitivity, regime dependence. How much the honest cumulative effective trial count (correlated variants clustered) deflated the raw Sharpes.›
+‹Filled at Phase 5. Master results table ranking all 25 specs (19 single-factor + 6 multi-factor) by DSR-adjusted, cost-inclusive path-Sharpe. Which cleared the seven-point kill-gate (if any). What distinguishes survivors from failures — category, frequency, cost sensitivity, regime dependence. How much the honest cumulative effective trial count (correlated variants clustered) deflated the raw Sharpes.›
 
 ## 8. Conclusion
 
