@@ -124,6 +124,10 @@ def test_batch_p310_p314_registered_with_frozen_prereg_params() -> None:
     # P3.10-P3.14 batch-drafted blind block (operator ruling 2026-07-10): pin the frozen params.
     assert STRATEGIES["gap_and_go"].base_params == {"gap_threshold": 0.010, "vol_mult": 1.2}
     assert STRATEGIES["gap_and_go"].param_steps == {"gap_threshold": 0.005, "vol_mult": 0.2}
+    # gap_fade: owed directional twin (2026-07-10), same blind params, rejection trigger
+    assert STRATEGIES["gap_fade"].base_params == {"gap_threshold": 0.010, "vol_mult": 1.2}
+    assert STRATEGIES["gap_fade"].param_steps == {"gap_threshold": 0.005, "vol_mult": 0.2}
+    assert STRATEGIES["gap_fade"].factory(STRATEGIES["gap_fade"].base_params).name == "gap_fade"
     assert STRATEGIES["opening_range_breakout"].base_params == {
         "opening_range_minutes": 30.0,
         "break_buffer": 0.001,

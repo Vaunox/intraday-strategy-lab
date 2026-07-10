@@ -42,7 +42,7 @@
 
 ## 4. Dual-variant + frequency protocol
 
-- **Genuine DIRECTIONAL dichotomies — BOTH owed** (surface at pre-registration, never silently pick one): **P3.1 VWAP** cross/reversion; **P3.7 Adaptive-MA** cross/slope; **P3.13 Scalping** MR/momentum.
+- **Genuine DIRECTIONAL dichotomies — BOTH owed** (surface at pre-registration, never silently pick one): **P3.1 VWAP** cross/reversion; **P3.7 Adaptive-MA** cross/slope; **P3.13 Scalping** MR/momentum; **P3.10 Gap** and-go / gap-fade (**added 2026-07-10** — a directional opposite must not be direction-cherry-picked; the gap-fill fade is the owed twin `gap_fade`, run as a genuine distinct trial, NOT a life-gated variant).
 - **METHOD / FILTER / FREQUENCY choices — pick the natural PRIMARY**, log it, run the other only as a **ledger-charged variant if the primary shows life**. Frequency: `MASTER_BLUEPRINT.md:179` — the natural frequency is spec-set; "5/15-min" is a candidate range, not both-owed. A 5+15 pair of one idea is correlated (clusters ~1 trial); 15-min lowers turnover so it can flip a cost verdict — note the frequency + that cost-viability is frequency-specific.
 
 ## 5. Standing run discipline
