@@ -18,6 +18,7 @@ from lab.research.strategies.adaptive_ma import adaptive_ma_cross_spec, adaptive
 from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.donchian_breakout import donchian_breakout_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
+from lab.research.strategies.momentum_pullback import momentum_pullback_spec
 from lab.research.strategies.pivot_reversion import pivot_reversion_spec
 from lab.research.strategies.reference import ReferenceMomentumSpec
 from lab.research.strategies.reversal import reversal_spec
@@ -101,5 +102,10 @@ STRATEGIES: dict[str, StrategyEntry] = {
         factory=vol_contraction_reversion_spec,
         base_params={"entry_z": 2.0, "atr_long": 100.0},
         param_steps={"entry_z": 0.5, "atr_long": 20.0},
+    ),
+    "momentum_pullback": StrategyEntry(  # P3.9 -- in-trend RSI pullback-resumption; blind
+        factory=momentum_pullback_spec,
+        base_params={"trend_period": 50.0, "rsi_pullback": 30.0},
+        param_steps={"trend_period": 10.0, "rsi_pullback": 5.0},
     ),
 }
