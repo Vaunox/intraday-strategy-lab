@@ -50,6 +50,14 @@ After P3.9, the remaining single-factor pre-registrations (**P3.10** gap-and-go 
 
 ---
 
+## Operator ruling (2026-07-10) — gap direction promoted to a both-owed pair
+
+The gap-fill **fade** is the directional opposite of gap-and-go. A directional opposite must **not** be direction-cherry-picked, so the settled both-owed list **gains gap-and-go / gap-fade** (joining P3.1 VWAP, P3.7 Adaptive-MA, P3.13 Scalping). The fade is drafted as a blind, a-priori twin **`gap_fade` (P3.10b)** — same qualifying gap event, trigger flipped to **VWAP rejection**, faded toward the fill — and **run now under panel scope as a genuine distinct ledger-charged trial** (§6 cost-viability first, strict decisive bar). This **supersedes** the earlier "deferred ungated study" framing (run now, not deferred); the P3.10 gap_and_go prereg §0/§7 is updated. **§6 landing: VIABLE** (RELIANCE 226 trades, median **1.024% ≫ cost**); **divergence from gap-and-go PROVEN** (0% shared entry bars — hold vs reject are disjoint on real data, a clean pair unlike the P3.7 KAMA degeneracy).
+
+*(All OTHER §7 "run only if the primary shows life" variants stay parked — their trigger [a live primary] never fired, so running them would be fishing. Scalping 1–3 min stays blocked pending finer-bar backfill. The §6 single-symbol→panel cost-screen fix stays deferred + forward-only.)*
+
+---
+
 ## Phase 3 readiness — BLOCKING issues (opened 2026-07-08, call-site audit)
 
 > A call-site verification of the Gate-2 harness (proving each primitive is actually *invoked*, not merely defined) found four issues that must close before **Phase 3.1** opens. Two are genuine correctness gaps, not documentation. Until all four close, kill-gate criteria **3 (PBO)** and **6/7 (robustness/regime)** are **provisional**.

@@ -19,6 +19,7 @@ from lab.research.strategies.breakout import breakout_spec
 from lab.research.strategies.bull_flag import bull_flag_spec
 from lab.research.strategies.donchian_breakout import donchian_breakout_spec
 from lab.research.strategies.gap_and_go import gap_and_go_spec
+from lab.research.strategies.gap_fade import gap_fade_spec
 from lab.research.strategies.ma_crossover import ma_crossover_spec
 from lab.research.strategies.mean_reversion import mean_reversion_spec
 from lab.research.strategies.momentum_pullback import momentum_pullback_spec
@@ -115,6 +116,11 @@ STRATEGIES: dict[str, StrategyEntry] = {
     ),
     "gap_and_go": StrategyEntry(  # P3.10 -- confirmed opening-gap continuation; blind
         factory=gap_and_go_spec,
+        base_params={"gap_threshold": 0.010, "vol_mult": 1.2},
+        param_steps={"gap_threshold": 0.005, "vol_mult": 0.2},
+    ),
+    "gap_fade": StrategyEntry(  # P3.10b -- owed twin: fade a gap that rejects VWAP; blind
+        factory=gap_fade_spec,
         base_params={"gap_threshold": 0.010, "vol_mult": 1.2},
         param_steps={"gap_threshold": 0.005, "vol_mult": 0.2},
     ),
