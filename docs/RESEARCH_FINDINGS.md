@@ -2,13 +2,13 @@
 
 > **How this document is maintained.** This is a *living research paper*, authored and updated by the engineer/agent building each study — **not pre-filled**. The strategy reference and prior-evidence tables in §4 are background (what each strategy is and what the literature already suggests); the **results** fields (§4 scorecard and §5–§6) are scaffolds. As each strategy study (Phase 3 / Phase 4) completes, its author replaces the `‹placeholder›` fields with the study's **real, cost-inclusive, kill-gate numbers** and its honest verdict. Do not write results that have not been produced by an actual validated run. An honest KILL is a complete result.
 
-*Status: scaffold — reference tables populated; no study results recorded yet.*
+*Status: **COMPLETE** — Phase 5 findings synthesis (2026-07-10). All 25 specs recorded (§5 / §6); cross-strategy synthesis (§7) + conclusion (§8) written. Exploration-grade (frozen-49 survivor-only panel). §4.3 verdict-grade scorecard: see the pending-ruling note there. Phase 4.5 meta-labeling not conducted (§6b, out of scope).*
 
 ---
 
 ## Abstract
 
-‹To be written after the studies are complete. One paragraph: what was tested (**25 strategy specs — 19 single-factor + 6 multi-factor combinations**, across the 20 blueprint study-rows P3.1–P3.14 / P4.1–P4.6), on what data (Kite historical NSE equities), under what discipline (purged CV / CPCV / Deflated Sharpe / PBO / full Indian costs / seven-point kill-gate), and the honest bottom line — which strategies (if any) held a real, cost-surviving edge.›
+This program asked whether any strategy in a fixed slate of classic intraday techniques holds a small, real, cost-surviving edge on liquid NSE cash equities using only Kite historical 5-minute OHLCV. **25 strategy specs** were tested — **19 single-factor** (across the 14 blueprint study-categories P3.1–P3.14, counting owed directional variants such as VWAP cross/reversion) + **6 multi-factor combinations** (P4.1–P4.6). Each was **pre-registered before its run** (parameters and kill thresholds committed to git first) and scored through an **identical seven-point kill-gate** — CPCV median path-Sharpe > 1.0, Deflated Sharpe ≥ 0.95 against the program-wide effective trial count, PBO < 0.20, plus distribution / expectancy / robustness / regime tests — **net of the full Indian round-trip cost**, on a frozen 10-name ADV-tiered panel (per-symbol-then-aggregate, with a 5-name held-out breadth check). **The result is a clean null: every spec was killed or recorded cost-dead; zero cleared the gate.** 15 single-factor specs KILLed on the panel battery, 4 were recorded §6-cost-dead (median per-trade gross below the ~0.18% round-trip cost, so the battery was skipped), and all 6 composites KILLed. The Deflated Sharpe was **0.000 for every scored spec**; the honest cumulative trial count was **99 raw → 9.06 effective** (correlated variants clustered). Precisely scoped (§8): on this **frozen large-cap survivor-only panel at 5-minute resolution**, these retail-accessible classic methods — single-factor and in confluence — **do not survive realistic costs**. This is *not* a claim that no intraday edge exists anywhere; it is the honest, pre-registered verdict for these methods on this universe at this resolution.
 
 ---
 
@@ -28,7 +28,7 @@
 | Date range | 2015-02-02 → 2026-07-03 (Kite's 5-min history begins Feb 2015) |
 | Intervals | 5-minute (primary decision frequency; ≈ 8.96M candles) |
 | Hygiene applied | corp-action adjustment (adjusted layer), bad-tick filter (zero/blank-price bars dropped at ingest, logged), gap detection, liquidity screen, ESM/T2T exclusion. **Survivorship NOT corrected** (see §2.1). |
-| Data version | ‹hash / tag› |
+| Data version | frozen-49 survivor-only backfill (immutable raw Parquet layer); provenance & as-built delta in `config/universe/nifty50.yaml` + `docs/DATA_MANIFEST.md` (no single tag — see §9) |
 
 **Data constraint:** Kite historical candles only. No live depth, no alternative feeds. Microstructure/order-book strategies (order-flow imbalance, depth) are out of scope. Every strategy in the slate is derivable from OHLCV(+volume) alone — see §4 reference table.
 
@@ -52,7 +52,7 @@ The backfill uses **today's** index members over **past** data, so it carries **
 - **Pre-registration:** each study's hypothesis, parameters, and kill thresholds were committed to git **before** its first test run (auditable in history).
 - **The seven-point kill-gate** — every threshold a single pre-committed number in `config/killgate.yaml`, never a range, never adjusted to pass: (1) CPCV median path-Sharpe **> 1.0** net of costs; (2) **DSR ≥ 0.95** vs the effective trial count (correlated variants clustered); (3) **PBO < 0.20**; (4) **≥ 90% of CPCV paths positive and 10th-percentile path-Sharpe ≥ 0**; (5) **profit factor ≥ 1.3, top-5 wins < 40% of gross profit, expectancy > round-trip cost**; (6) survives the robustness battery (each sub-test with a pinned bar); (7) median path-Sharpe > 0 in **every** pre-defined regime bucket, and net-positive with the single best bucket removed. Fail any one → KILL.
 
-**Cumulative effective trial count at time of writing:** ‹machine-maintained effective-N — clustered from the per-trial return streams in the ledger, never a raw variant count, never hand-typed›.
+**Cumulative effective trial count (program complete):** **99 raw trials → 9.06 effective** (machine-maintained, clustered from the per-trial return streams in the ledger via the correlation participation ratio — never a raw variant count). Note the DSR deflation was moot for verdicts here: every scored spec had a *negative* CPCV Sharpe, so DSR = 0.000 regardless of the trial count.
 
 ---
 
@@ -121,6 +121,8 @@ The slate is fixed before testing. §4.1 defines each strategy and its exact Kit
 
 ### 4.3 — Results scorecard (filled as studies complete)
 
+> **⚠ §4.3 status — PENDING operator ruling (A vs B), left empty until confirmed.** Every result produced is **exploration-grade / provisional upper-bound** — scored on the **frozen-49 survivor-only** backfill (45 current NIFTY-50 members + 4 demoted names; the 5 current members ETERNAL / INDIGO / JIOFIN / MAXHEALTH / TMPV are absent), a **10-name ADV-tiered panel** (+ 5 held-out reserved, never scored), **5-minute OHLCV**. **No spec is verdict-grade; zero cleared the seven-point kill-gate.** Per the Phase-5 ruling this scorecard stays with `‹—›` placeholders until the operator confirms whether to **(A)** populate it with these numbers, each row stamped exploration-grade with the caveats above, or **(B)** keep it reserved for future backfill-verified verdicts. **The full per-spec numbers are recorded in §5 / §6 either way.**
+
 **Single-factor (Phase 3)**
 | ID | Strategy | Category | Verdict | CPCV median Sharpe (net) | DSR | PBO | Section |
 |---|---|---|---|---|---|---|---|
@@ -153,115 +155,204 @@ The slate is fixed before testing. §4.1 defines each strategy and its exact Kit
 
 ## 5. Single-factor study results
 
-*Each subsection is filled by the study's author when the study completes. Template below — copy per strategy.*
+*Each result below is transcribed from the study's committed pre-registration Result block (exploration-grade, panel scope). All are net of the full round-trip cost; DSR is 0.000 for every scored spec (negative CPCV Sharpe); "breadth" = fraction of the 10 panel symbols individually positive. Numbers are provisional / upper-bound (frozen-49 survivor-only; see §2.1). Owed directional variants are listed under their parent study.*
 
 ### 5.1 — P3.1 · VWAP
-- **Hypothesis (pre-registered):** ‹economic rationale — why this should have an edge›
-- **Pre-registration commit:** ‹git SHA, dated before first test run›
-- **Spec summary:** ‹entry / exit / holding / frequency / key params›
-- **Variants tried (all charged to the trial ledger):** ‹list›
-- **Results (cost-inclusive):** CPCV median path-Sharpe ‹—›; path distribution ‹—›; DSR ‹—›; PBO ‹—›; profit factor ‹—›; regime stability ‹—›; robustness ‹pass/fail per test›.
-- **Seven-point kill-gate:** (1) ‹—› (2) ‹—› (3) ‹—› (4) ‹—› (5) ‹—› (6) ‹—› (7) ‹—›
-- **Verdict:** ‹KILL / PASS›
-- **Notes:** ‹what the numbers say; where the edge (if any) lives or dies; cost sensitivity›
+- **Hypothesis:** institutions benchmark fills to VWAP, creating intraday pull toward it (fade) — or a decisive cross of VWAP signals the trend side. **Both-owed directional dichotomy** → two specs.
+- **Specs (5-min):** V1 `vwap_mean_reversion` (fade `|VWAP-deviation| > entry` back toward VWAP); V2 `vwap_cross` (trade the side of a `cross_threshold`-cross). Blind params; V1 run first as the corrected-pipeline rebuild regression check (reproduced the pilot).
+- **Verdict: both KILL.** V1 aggregate CPCV path-Sharpe **−18.793** (DSR 0.000, PBO 0.000, PF 0.01, 0/10 breadth); V2 **−11.121** (DSR 0.000, PBO 0.000, PF 0.17, 0/10). Cumulative effective-N 1.37.
+- **Notes:** opposite bets both dying is coherent — no standalone VWAP directional edge on large-caps; the fade fights momentum, the cross lags.
 
 ### 5.2 — P3.2 · Breakout / Breakout Filters
-‹same template›
+- **Hypothesis:** ranges resolve; a genuine break on expanding volume releases pent-up order flow and continues.
+- **Spec (5-min):** `breakout` — intraday-reset 20-bar range break filtered by relative volume > 1.5×; ride to square-off. Volume filter the primary; volatility-entry filter deferred as a ledger variant.
+- **Verdict: KILL.** aggregate **−8.753** (DSR 0.000, PBO 0.000, PF 0.23, 0/10 breadth). Effective-N 1.81.
+- **Notes:** the volume filter did not rescue the intraday breakout; the false-break rate + cost drag dominate.
 
 ### 5.3 — P3.3 · Mean Reversion
-‹same template›
+- **Hypothesis:** short-horizon overreaction reverts toward a rolling mean.
+- **Spec (5-min):** `mean_reversion` — fade `|z| > 2` back to within 0.5 of an **intraday-reset** rolling mean (new `intraday_zscore`, gap-blind by design).
+- **Verdict: KILL — the most decisive of the first four.** aggregate **−27.040** (DSR 0.000, PBO 0.000, PF 0.00, 0/10 breadth). Effective-N 2.18.
+- **Notes:** fading intraday moves on large-caps loses hard — the fat left tail (fading real moves) dominates. Reinforces "no intraday MR edge here."
 
 ### 5.4 — P3.4 · Reversal Trading
-‹same template›
+- **Hypothesis:** a failed breakout traps traders → a sharp snapback (swing-failure).
+- **Spec (5-min):** `reversal` — fade a failed breakout of the **causal** intraday-reset prior swing high/low (`intraday_donchian`): poke by ≥ `break_buffer`, close back inside, fade. No-lookahead prefix-invariance = hard precondition, **PASSED**.
+- **Verdict: KILL.** aggregate **−9.910** (DSR 0.000, PBO 0.000, PF 0.15, 0/10 breadth). Effective-N 2.77 — the largest independent-weight jump (most distinct mechanism).
+- **Notes:** cost was not the killer (PF 0.15, purely directional) — failed breaks don't reverse on large-caps.
 
 ### 5.5 — P3.5 · Pivot Points
-‹same template›
+- **Hypothesis:** widely-watched classic pivots become self-fulfilling S/R.
+- **Spec (5-min):** `pivot_reversion` — fade at classic daily R1/S1 from the **causal** prior session (`classic_pivot_levels`), target the central pivot. No-lookahead precondition (incl. no same-day leak) **PASSED**.
+- **Verdict: KILL.** aggregate **−9.848** (DSR 0.000, PBO 0.000, PF 0.19, 0/10 breadth). Effective-N 3.61.
+- **Notes:** myth-check — widely-watched pivots do not self-fulfill on large-caps.
 
 ### 5.6 — P3.6 · Donchian Channels
-‹same template›
+- **Hypothesis:** classic trend-following capture of a channel break.
+- **Spec (5-min):** `donchian_breakout` — break of the prior **55-bar GLOBAL** Donchian channel (`prior_donchian`, excludes current bar, crosses the gap = multi-session level). No-lookahead precondition **PASSED**.
+- **Verdict: KILL — the least-bad single-factor trend/continuation bet.** aggregate **−6.132** (DSR 0.000, PBO 0.000, PF 0.33, 0/10 breadth). Effective-N 4.07.
+- **Notes:** the least-dead continuation bet — a multi-session channel is marginally more informative than the intraday range break (−8.75), but still no edge. (Anchors the turnover-gradient observation, §7.)
 
 ### 5.7 — P3.7 · Adaptive Moving Averages
-‹same template›
+- **Hypothesis:** KAMA speeds up in trends / slows in chop; trade the cross or the slope. **Both-owed dichotomy** → two specs.
+- **Specs (5-min):** V1 `adaptive_ma_cross` (fast/slow KAMA 10/30 cross); V2 `adaptive_ma_slope` (single-KAMA slope). **Correction caught pre-run:** V1-as-price-vs-single-KAMA was mathematically identical to V2 slope; the divergence precondition test caught it, V1 was redefined as the fast/slow cross (34.5% divergence then proven on real RELIANCE). Prefix-invariance precondition **PASSED**.
+- **Verdict: V1 KILL, V2 COST-DEAD.** V1 aggregate **−12.948** (DSR 0.000, PBO 0.000, PF 0.11, 0/10 breadth) — worse than the pure breakouts. V2 recorded **§6-cost-dead** (30,518 trades, median gross 0.122% < 0.182% round-trip; battery skipped per the pre-registered asymmetry — no panel stream). Effective-N 4.34.
+- **Notes:** the fast adaptive slope dies on *turnover* (not direction); the cross dies on direction. Sharpens the turnover gradient (§7).
 
 ### 5.8 — P3.8 · Volatility-Based Filters
-‹same template›
+- **Hypothesis:** a vol filter has no standalone edge, so it is tested as **two INDEPENDENT, blind, regime-conditional strategies** (regime + signal defined whole), not an overlay.
+- **Specs (5-min):** shared **causal ATR-ratio** regime (`atr(short)/atr(long)`). C1 `vol_expansion_breakout` (intraday breakout gated to expanding vol); C2 `vol_contraction_reversion` (z-fade gated to contracting vol). `atr_ratio` + per-spec no-lookahead preconditions **PASSED**.
+- **Verdict: both KILL.** C1 aggregate **−7.360** (DSR 0.000, PBO 0.000, PF 0.27, 0/10) — the vol-gate *helped* (ungated breakout was −8.75). C2 **−25.636** (DSR 0.000, PBO 0.000, PF 0.00); C2 was §6-borderline-cost-dead on RELIANCE (0.174% vs 0.182%) but the §6-skip was **overridden** → full panel → decisively dead (the single-symbol read badly understated the panel; override vindicated). Effective-N 6.12.
+- **Notes:** vol-gating helped *continuation* more than *reversion*, and rescued neither.
 
 ### 5.9 — P3.9 · Momentum Pullback
-‹same template›
+- **Hypothesis:** in a trend, enter on the resumption after a shallow in-trend pullback (better entry than chasing).
+- **Spec (5-min):** `momentum_pullback` — `close` vs `SMA(50)` trend + `RSI(14)` crossing back up through 30 in-trend (same-day-cross guard). No-lookahead precondition **PASSED**.
+- **Verdict: COST-DEAD via §6 (compound).** The blind base (`rsi_pullback=30`) is **near-degenerate on real data** — 5 trades in 11 years; only **0.9%** of RSI-30 recoveries fall in an uptrend (a dip deep enough for RSI(14)<30 almost always also breaks `close`<SMA50 — deep-oversold RSI and the trend filter are near-mutually-exclusive). A pre-run diagnostic across tradeable depths (35/40/45 → 76/586/3,731 trades, **non-blind, NOT scored**) confirmed cost-dead everywhere (~0.13% < 0.182%). Battery skipped; **no panel stream** (ledger unchanged). Recorded cost-dead per operator ruling.
+- **Notes:** distinct from P3.7-V2 (which died on turnover) — P3.9 is degenerate at the canonical depth and dies on small per-trade gross at every tradeable depth.
 
 ### 5.10 — P3.10 · Gap and Go
-‹same template›
+- **Hypothesis:** a large opening gap confirmed by early participation continues intraday (gap-and-go); the **gap-fill fade** is the owed directional twin (P3.10b — a directional opposite must not be cherry-picked, so it was promoted to both-owed).
+- **Specs (5-min):** `gap_and_go` (gap ≥ 1% + relative-volume surge + `close` on the gap side of VWAP → ride); `gap_fade` (P3.10b — same qualifying gap, trigger flipped to **VWAP rejection** → fade toward the fill). **Divergence from the twin PROVEN** on RELIANCE (226 vs 189 entries, **0% shared bars** — reject vs hold are disjoint). No-lookahead **PASSED**.
+- **Verdict: both KILL.** gap_and_go aggregate **−0.743** (DSR 0.000, PBO 0.000, PF 0.75, breadth **0.20**); gap_fade **−0.578** (DSR 0.000, PBO 0.043, PF 0.87, breadth **0.30**). Effective-N 8.69.
+- **Notes:** the **two gap studies are the two least-bad of the whole program** (PF 0.75 / 0.87) — they trade sparsely on big-move events. Both gap directions dying is coherent (cf. P3.1). Held conditional in §7 (sparse-big-move observation), not "getting warmer."
 
 ### 5.11 — P3.11 · Opening Range Breakout (ORB)
-‹same template›
+- **Hypothesis:** the first-N-minute range is the day's initial balance; a break signals the day's direction.
+- **Spec (5-min):** `opening_range_breakout` — break of the first-30-min range after the window closes; ride to square-off. No-lookahead precondition **PASSED**.
+- **Verdict: KILL.** aggregate **−5.395** (DSR 0.000, **PBO 0.143** — elevated, the highest of the single-factor batch, but within the < 0.20 bar; PF 0.37, 0/10 breadth). Effective-N 7.74.
+- **Notes:** the popularized ORB shows no edge on large-caps — consistent with the a-priori "crowded / decayed" prior. (The P4.2 composite `orb_vwap` reproduced this result *exactly* — §6.2.)
 
 ### 5.12 — P3.12 · Bull Flag
-‹same template›
+- **Hypothesis:** a sharp impulse + a tight low-volume consolidation + a breakout = continuation.
+- **Spec (5-min):** `bull_flag` — impulse (return over K bars) + tight consolidation (`prior_donchian` range ≤ `tight_frac` × impulse) + breakout, with a same-day guard. **Largest parameter surface in the program (4 knobs);** blind base run as committed, **not tuned**. No-lookahead **PASSED**.
+- **Verdict: KILL.** aggregate **−0.651** (DSR 0.000, **PBO 0.400 — the ONLY criterion-3 (PBO) failure in the entire program**, the gate explicitly pricing the 4-knob overfitting surface; PF 0.87, breadth **0.30**). 523 active days (sparse) but graded cleanly — **not** INSUFFICIENT.
+- **Notes:** scrutinized as the highest-suspicion study (largest surface): not near-threshold, decisively net-negative. Lands in the least-bad cluster with the gaps (net expectancy −0.007%, closest-to-breakeven of any spec) — but the high PBO is the surface *being caught*, not an edge.
 
 ### 5.13 — P3.13 · Scalping
-‹same template›
+- **Hypothesis:** many small fast trades capture micro mean-reversion or micro momentum. **Both-owed dichotomy** → two specs (exact opposites).
+- **Specs (5-min):** `scalp_mean_reversion` (fade the last bar's move) + `scalp_momentum` (chase it), per-bar same-day last-bar return. No-lookahead **PASSED**; divergence definitional (opposite sides on every triggered bar).
+- **Verdict: both COST-DEAD via §6.** 20,804 trades / 11 yr (7.39/day), median gross **0.105% < 0.182%** round-trip for both. Battery skipped; **no panel stream**.
+- **Notes:** the cost wall, demonstrated honestly. **Frequency caveat:** scalping's natural 1–3 min bars are unavailable (archive is 5-min only), so this is a coarser-than-natural proxy; a 1–3 min re-test is deferred to a future finer-data study.
 
 ### 5.14 — P3.14 · Moving Average Crossovers
-‹same template›
+- **Hypothesis:** a fast MA crossing a slow MA marks a trend change; hold the trend side.
+- **Spec (5-min):** `ma_crossover` — position = sign of `SMA(20) − SMA(50)`; plain, non-adaptive (distinct from P3.7 KAMA). No-lookahead precondition **PASSED**.
+- **Verdict: KILL.** aggregate **−11.745** (DSR 0.000, PBO 0.000, PF 0.15, 0/10 breadth). Effective-N 7.50.
+- **Notes:** whipsaws in intraday chop exactly as the prior warned; lands right beside the P3.7 KAMA cross (−12.948) — plain and adaptive MA crosses die together (a tight trend cluster).
 
 ---
 
 ## 6. Multi-factor combination results
 
+*Phase-4 policy (operator ruling): the §6 cost pre-check was **informational only** — no battery was skipped; every composite ran the full panel battery. All are minimal AND-confluences (≤ 2 knobs), blind, with no construction drawn from any Phase-3 pattern. Numbers exploration-grade; DSR 0.000 throughout.*
+
 ### 6.1 — P4.1 · VWAP + Breakout Filter + Volume Surge
-‹same template as §5.1›
+- **Hypothesis:** three independent confirmations (range break + VWAP trend-side + volume surge) should cut false breaks.
+- **Spec (5-min, 2 knobs):** `vwap_breakout_volume` — `close > intraday_donchian_high` AND `close > VWAP` AND `relative_volume ≥ 1.5`. No-lookahead **PASSED**. §6 (informational): viable-side (4,068 trades, 0.432%).
+- **Verdict: KILL.** aggregate **−8.202** (DSR 0.000, PBO 0.000, PF 0.25, 0/10 breadth). Effective-N 8.90.
+- **Notes:** ≈ the single-factor breakout (P3.2 −8.753); the three-way confluence added nothing.
 
 ### 6.2 — P4.2 · ORB + VWAP Confirmation
-‹same template›
+- **Hypothesis:** the VWAP side filters low-quality opening breaks.
+- **Spec (5-min, 2 knobs):** `orb_vwap` — opening-range break confirmed by the VWAP side. No-lookahead **PASSED**. §6: viable-side (2,488 trades, 0.524%).
+- **Verdict: KILL.** aggregate **−5.395** (DSR 0.000, PBO 0.143, PF 0.37, 0/10 breadth). Effective-N 8.68.
+- **Notes — logical redundancy (not a bug):** these numbers are **numerically identical** to the single-factor P3.11 ORB (−5.395 / PBO 0.143 / PF 0.37). Breaking above the opening-range high **already** puts `close` above the intraday VWAP, so the VWAP-side condition filters nothing — the confluence added *no information*. A genuine live-AND logical redundancy, not an inert-filter bug.
 
 ### 6.3 — P4.3 · Bollinger Band Mean Reversion + RSI Extreme
-‹same template›
+- **Hypothesis:** two exhaustion signals agreeing (band touch + RSI extreme) should improve the fade.
+- **Spec (5-min, 2 knobs):** `bollinger_rsi` — fade `close` beyond the band AND `RSI` at an extreme; exit to the middle band. No-lookahead **PASSED**. §6: viable-side (3,513 trades, 0.325%).
+- **Verdict: KILL.** aggregate **−13.126** (DSR 0.000, PBO 0.000, PF 0.09, 0/10 breadth). Effective-N 8.63.
+- **Notes:** a fade confluence dies hard, like the other intraday fades (P3.3 −27.0, P3.8-C2 −25.6) — the two exhaustion signals **fail together in strong trends**, exactly the a-priori caution.
 
 ### 6.4 — P4.4 · Adaptive Moving Average + ADX
-‹same template›
+- **Hypothesis:** trade the KAMA trend only when ADX confirms real trend strength (gate out chop).
+- **Spec (5-min, 2 knobs):** `adaptive_ma_adx` — KAMA slope held only while `ADX > 25`. No-lookahead **PASSED**. §6: cost-dead-side (16,236 trades, 0.133%).
+- **Verdict: KILL — the worst result in the whole program.** aggregate **−39.807** (DSR 0.000, PBO 0.000, PF 0.00, net expectancy −1.21%/trade, 0/10 breadth). Effective-N 9.13.
+- **Notes:** the ADX gate **did not cure** the KAMA-slope turnover — ~16k trades × the round-trip cost = catastrophic drag (cf. P3.7-V2, recorded §6-cost-dead; here the informational-§6 policy runs the full battery and makes the cost bleed explicit).
 
 ### 6.5 — P4.5 · Pivot Point Confluence + MACD Crossover
-‹same template›
+- **Hypothesis:** a MACD crossover at a classic pivot level reduces acting on dead levels.
+- **Spec (5-min, 1 knob — lowest surface):** `pivot_macd` — a bullish MACD crossover near S1 (LONG) / bearish near R1 (SHORT); MACD fixed textbook. No-lookahead **PASSED**. §6: viable-side, sparse (986 trades, 0.426%). **Degeneracy watch RESOLVED** (986 trades — the level+crossover AND is not near-mutually-exclusive).
+- **Verdict: KILL.** aggregate **−6.078** (DSR 0.000, PBO 0.000, PF 0.32, 0/10 breadth). 2,702 active days (sparse) but graded cleanly — **not** INSUFFICIENT. Effective-N 9.71.
+- **Notes:** weak priors on both legs (pivots' weak base + MACD lag), as the a-priori caution warned.
 
 ### 6.6 — P4.6 · Donchian Channel Breakout + ATR Stop-Loss
-‹same template›
+- **Hypothesis:** an ATR-scaled trailing stop provides risk control on a clean breakout entry.
+- **Spec (5-min, 2 knobs):** `donchian_atr_stop` — global Donchian breakout entry + ATR-trailing-stop exit. No-lookahead **PASSED**. §6: viable-side (4,041 trades, 0.360%).
+- **Verdict: KILL.** aggregate **−9.215** (DSR 0.000, PBO 0.000, PF 0.20, 0/10 breadth). Effective-N 9.06.
+- **Notes — distinct from P3.6 (identity check passed):** −9.215 ≠ P3.6 donchian's −6.132, and the trade count differs (4,041 vs ~3,298), so the ATR stop **is live** (no inert-exit bug). But the stop made the breakout **worse** — it cuts winners short and whipsaws out on intraday noise, adding turnover/cost. The honest "improves risk, not the entry" read, carried to its conclusion.
 
 ---
 
 ## 6b. Optional meta-labeling results (Phase 4.5)
 
-*Filled only if a Phase-3/4 strategy showed a gross edge and qualified for meta-labeling. If nothing qualified, state that plainly here — it is a valid outcome.*
-
-**Qualifying strategies:** ‹list, or "none qualified — Phase 4.5 skipped"›
-
-*Per qualifying strategy — copy the template:*
-
-### 6b.1 — ‹strategy ID› + meta-label
-- **Why it qualified:** ‹gross expectancy / gross CPCV path-Sharpe before the meta-model›
-- **Meta-model:** ‹classifier, context features (no lookahead), calibration method›
-- **Variants tried (all charged to the trial ledger):** ‹list›
-- **Net result after meta-labeling (cost-inclusive):** CPCV median path-Sharpe ‹—›; DSR ‹—›; PBO ‹—›; **delta vs un-filtered rule** ‹—›.
-- **Seven-point kill-gate on the meta-labeled strategy:** ‹per-criterion›
-- **Verdict:** ‹improved & PASS / improved but still KILL / no improvement — meta-model discarded›
-- **Notes:** ‹did filtering the rule's instances add real net value, or just overfit context?›
+**NOT CONDUCTED — out of scope for this program.** Meta-labeling (Phase 4.5) is an *optional* ML tier, gated on a strategy first showing a **gross edge** worth filtering. **No strategy qualified:** all 25 specs were KILLed or recorded §6-cost-dead; none exhibited a gross edge for a meta-model to refine. Phase 4.5 was therefore not run — a valid, expected outcome given the null. (Meta-labeling cannot manufacture an edge from a rule that has none; it can only prune the instances of a rule that already has positive gross expectancy.)
 
 ---
 
 ## 7. Cross-strategy synthesis
 
-‹Filled at Phase 5. Master results table ranking all 25 specs (19 single-factor + 6 multi-factor) by DSR-adjusted, cost-inclusive path-Sharpe. Which cleared the seven-point kill-gate (if any). What distinguishes survivors from failures — category, frequency, cost sensitivity, regime dependence. How much the honest cumulative effective trial count (correlated variants clustered) deflated the raw Sharpes.›
+**Master ranking — the 21 battery-scored specs, least-bad → worst by aggregate CPCV path-Sharpe (net of cost).** All are decisively negative; breadth is 0/10 panel symbols for every spec except the three least-bad. The 4 §6-cost-dead specs (no panel Sharpe) follow. *Exploration-grade throughout.*
+
+| # | Spec (study) | Aggregate CPCV | PF | Category |
+|---|---|---|---|---|
+| 1 | gap_fade (P3.10b) | −0.578 | 0.87 | gap fade |
+| 2 | bull_flag (P3.12) | −0.651 | 0.87 | pattern |
+| 3 | gap_and_go (P3.10) | −0.743 | 0.75 | gap continuation |
+| 4 | orb_vwap (P4.2) *≡ ORB* | −5.395 | 0.37 | composite |
+| 5 | opening_range_breakout (P3.11) | −5.395 | 0.37 | breakout |
+| 6 | pivot_macd (P4.5) | −6.078 | 0.32 | composite |
+| 7 | donchian_breakout (P3.6) | −6.132 | 0.33 | breakout/trend |
+| 8 | vol_expansion_breakout (P3.8-C1) | −7.360 | 0.27 | vol-gated |
+| 9 | vwap_breakout_volume (P4.1) | −8.202 | 0.25 | composite |
+| 10 | breakout (P3.2) | −8.753 | 0.23 | breakout |
+| 11 | donchian_atr_stop (P4.6) | −9.215 | 0.20 | composite |
+| 12 | pivot_reversion (P3.5) | −9.848 | 0.19 | S/R fade |
+| 13 | reversal (P3.4) | −9.910 | 0.15 | reversal |
+| 14 | vwap_cross (P3.1-V2) | −11.121 | 0.17 | trend |
+| 15 | ma_crossover (P3.14) | −11.745 | 0.15 | trend |
+| 16 | adaptive_ma_cross (P3.7-V1) | −12.948 | 0.11 | trend |
+| 17 | bollinger_rsi (P4.3) | −13.126 | 0.09 | composite fade |
+| 18 | vwap_mean_reversion (P3.1-V1) | −18.793 | 0.01 | fade |
+| 19 | vol_contraction_reversion (P3.8-C2) | −25.636 | 0.00 | vol-gated fade |
+| 20 | mean_reversion (P3.3) | −27.040 | 0.00 | fade |
+| 21 | adaptive_ma_adx (P4.4) | −39.807 | 0.00 | composite trend |
+
+**§6-cost-dead (no panel battery — median per-trade gross < the 0.182% round-trip cost):** adaptive_ma_slope (P3.7-V2 — turnover), momentum_pullback (P3.9 — degenerate base + small gross), scalp_mean_reversion + scalp_momentum (P3.13 — 5-min proxy of a 1–3 min method).
+
+**What distinguishes the failures.** There is no survivor to distinguish. Among the failures, three patterns are visible — recorded strictly as **candidate hypotheses for future work, NOT as "getting warmer":** every member of the least-bad cluster is decisively net-negative (negative Sharpe, PF < 1, breadth « the 60% bar).
+
+1. **Turnover gradient (within trend/continuation bets).** Lower-turnover, longer-horizon continuation is less-bad: the slowest single-factor continuation (55-bar Donchian, −6.13) is the least-dead trend bet; faster MA crosses land worse (−11.7 to −12.9); the fastest adaptive slope died on turnover outright (cost-dead). A conditional pointer toward *low-turnover* continuation **if** any edge exists — magnitude firmly dead.
+2. **Sparse big-move events are least-bad overall.** The two gap studies (−0.578, −0.743) and bull_flag (−0.651) — all trading sparsely on large-move events — are the three least-bad of the entire program (PF 0.75–0.87, net expectancy nearest zero). A pattern *within failures*, not an edge.
+3. **Phase-4 meta-finding: confluence of dead factors mostly re-tests them.** Combining already-dead single factors manufactured no edge — the 6-composite slate added 28 raw trials (71 → 99) but only **−0.9 net effective** (9.95 → 9.06), because composites cluster tightly with their components. `orb_vwap` came back *numerically identical* to single-factor ORB (the VWAP leg logically redundant with an OR-high break); `adaptive_ma_adx` was the program's worst.
+
+**Overfitting control worked as intended.** DSR was 0.000 for all 21 scored specs (each negative — the deflation never had a positive Sharpe to deflate). PBO cleared < 0.20 for all but two, and the sole criterion-3 (PBO) failure — bull_flag at PBO 0.400 — was exactly the largest-surface (4-knob) study: the gate **catching** the surface, not being fooled by it. Effective-N (9.06 on 99 raw) reflects the heavy clustering of correlated variants — the honest anti-double-counting.
 
 ## 8. Conclusion
 
-‹The honest bottom line. Which strategies (if any) hold a real, cost-surviving edge, and which are bias/luck artifacts. If none cleared the gate, state it plainly — a complete and valuable result. Record the total cumulative effective trial count (correlated variants clustered) and its DSR implications. Note next steps only if a survivor exists (productionization is gated on a passing verdict).›
+**The honest bottom line: zero of the 25 specs cleared the seven-point kill-gate.** 15 single-factor specs and all 6 multi-factor composites KILLed on the panel battery; 4 single-factor specs were recorded §6-cost-dead (median per-trade gross below the ~0.18% round-trip cost). The Deflated Sharpe was **0.000 for every scored spec** (each had a negative CPCV Sharpe, so the multiple-testing deflation never had a positive result to shrink). The honest cumulative trial count was **99 raw → 9.06 effective** (correlated variants clustered). No spec is a bias/luck artifact to be explained away — there is no positive to explain.
+
+**Precisely scoped — what this claims and what it does NOT.** The claim: *these classic, retail-accessible strategies — single-factor and in blind confluence — do not survive realistic Indian round-trip costs* on —
+
+- **this universe:** the frozen **large-cap** NSE panel — a **10-name ADV-tiered scored panel** (HDFCBANK, RELIANCE, ICICIBANK, TCS, TATASTEEL, ULTRACEMCO, TITAN, COALINDIA, DRREDDY, TATACONSUM) plus a **5-name held-out** breadth set, drawn from the **frozen-49** survivor-only backfill. To reconcile the descriptors: the backfill holds **49 names** = **45 current NIFTY-50 members + 4 demoted names** (BPCL, BRITANNIA, HEROMOTOCO, INDUSINDBK — still trading, no longer in the index); the **5 current members ETERNAL / INDIGO / JIOFIN / MAXHEALTH / TMPV are absent** (a stale ~2024 list — see §2.1). Of those 49, **10 were scored** and **5 held out**;
+- **at this resolution:** **5-minute OHLCV** only — no live depth / order-book; scalping's natural 1–3 min bars are unavailable;
+- **exploration-grade:** survivor-only, so every number is a **provisional upper bound**, not a verdict-grade result.
+
+This is **NOT** the claim that "no intraday edge exists." It does not touch: finer resolutions or order-flow data; smaller / less-efficient names outside the large-cap panel (where such edges are classically strongest, and are untested here); point-in-time-correct index membership; or non-classical / ML-combined signals. The everything-kills result is fully consistent with *"no durable, retail-accessible edge on this universe at this resolution with OHLCV alone"* — the truthful answer the whole apparatus was built to deliver, pass or fail.
+
+**The held-out set was never spent.** The 5-name criterion-6d held-out set (INFY, SBIN, SUNPHARMA, ADANIPORTS, NESTLEIND) was reserved to *confirm a positive* — a strategy that cleared the panel would then have to hold on genuinely untouched names. Because **no strategy passed, the held-out set was never scored on any study** and remains a clean, unspent confirmation reserve for any future candidate.
+
+**Next steps are gated on a survivor — of which there are none.** No productionization follows (it is gated on a passing verdict). Candidate directions for future work — a broader / less-efficient (small-cap) universe, structural time-of-day / cross-sectional / regime signals, finer bars, and an honestly-constructed ensemble — are recorded, deferred, and forward-only in `POST_PROJECT_DIRECTIONS.md`; none influenced this program's blind pre-registrations.
 
 ## 9. Reproducibility appendix
 
-- **Data version / tag:** ‹—›
-- **Universe file:** ‹config/universe.yaml @ SHA›
-- **Config:** ‹config used for the runs›
-- **Commands:** ‹exact `scripts/run_study.py ...` invocation per study›
-- **Environment:** ‹python + key package versions›
+- **Data:** Kite Connect 5-minute OHLCV, 2015-02-02 → 2026-07-03, **frozen-49 survivor-only** backfill (immutable raw Parquet layer). Provenance in `config/universe/nifty50.yaml` (`as_of` snapshot) + `docs/DATA_MANIFEST.md`.
+- **Universe files:** `config/universe/nifty50.yaml` (index list) + `config/universe/study_panel.yaml` (the frozen 10-name scored panel + 5-name held-out — **Lock A**, pre-committed 2026-07-09, not a tunable knob).
+- **Config (all pre-committed, unchanged across every study):** `config/killgate.yaml` (the seven-point thresholds + the `panel:` two-part-verdict block), `config/costs.yaml` (Indian round-trip cost model), `config/default.yaml`.
+- **Registry & pre-registrations:** every spec's frozen blind params in `src/lab/research/strategies/registry.py` (pinned by `tests/unit/test_registry.py`); each spec's pre-registration in `docs/pre_registration/` with its Result block, committed **before** its run.
+- **Command (per study):** `uv run python scripts/run_panel_study.py --strategy <name> --interval 5minute --start 2015-02-02 --end 2026-07-03 --data-root data --ledger-dir data/ledger --config-dir config`. The 4 §6-cost-dead specs were recorded from the RELIANCE §6 pre-check (battery skipped by the pre-registered rule).
+- **Environment:** Python 3.11; TA-Lib (prebuilt wheels), numpy, pandas, pyarrow, scipy, structlog. Trial ledger (effective-N) in `data/ledger/` (gitignored local state; the checkpoint numbers are in `docs/PROGRESS.md`). Session-by-session build log: `docs/PROGRESS.md`.
 
 ---
 
